@@ -2,6 +2,10 @@
 
 A home get-together planner built with React, Vite, TypeScript and Convex.
 
+Live app: https://befitting-snake-688.convex.site
+
+Verified on 2 October 2026: frontend build, two budget checks and two browser checks pass. Browser checks were repeated against the live production site, including phone layout, saved task completion, cost totals, guest replies and host-link permissions. WhatsApp invitation content and links were checked; no messages or orders were sent.
+
 ## Use the app
 Create a gathering with a date, guest count and INR budget. Save the private host link: anyone holding this link can edit the plan, and there is no sign-in or recovery email.
 

@@ -104,9 +104,9 @@ test('host keys cannot edit another plan and invalid prices cannot be saved',asy
   await client.mutation(api.events.create,{...values,hostKey:otherHost,inviteKey:randomKey()});
   const plan=await client.query(api.events.get,{hostKey});
   const task=plan.tasks[0];
-  await expect(client.mutation(api.events.setDone,{hostKey:otherHost,taskId:task._id,done:true})).rejects.toThrow('Task not found in this plan');
+  await expect(client.mutation(api.events.setDone,{hostKey:otherHost,taskId:task._id,done:true})).rejects.toMatchObject({data:expect.stringContaining('Task not found in this plan')});
   const taskValues={hostKey,taskId:task._id,category:task.category,title:task.title,quantity:1,unit:'servings',due:date};
-  await expect(client.mutation(api.events.saveTask,{...taskValues,unitPriceCents:-100})).rejects.toThrow('Unit price');
-  await expect(client.mutation(api.events.saveTask,{...taskValues,sourceUrl:'https://swiggy.com.evil.example/menu'})).rejects.toThrow('Use an https outlet link');
+  await expect(client.mutation(api.events.saveTask,{...taskValues,unitPriceCents:-100})).rejects.toMatchObject({data:expect.stringContaining('Unit price')});
+  await expect(client.mutation(api.events.saveTask,{...taskValues,sourceUrl:'https://swiggy.com.evil.example/menu'})).rejects.toMatchObject({data:expect.stringContaining('Use an https outlet link')});
   expect((await client.query(api.events.get,{hostKey})).tasks[0].done).toBe(false);
 });
