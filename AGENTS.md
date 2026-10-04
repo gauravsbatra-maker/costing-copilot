@@ -19,8 +19,8 @@ When I report a bug, I'll name the part. Look there first, and tell me if you th
 - Never put a key or password in code, in a VITE_ variable or in a committed file.
 - Never save an uploaded Excel or brief file inside the project folder.
 ## 3. Shipping
-Live link: (fill after first deploy)
-Repo: [read the GitHub address from this folder's git remote and write it here], public
+Live link: https://befitting-snake-688.convex.site
+Repo: https://github.com/gauravsbatra-maker/costing-copilot, public
 Deploy: npm run deploy. A push never deploys by itself. After I say a milestone works: commit, push, then deploy.
 Keys: OPENAI_API_KEY lives in Convex environment variables, set for dev and for prod. Never in code, a VITE_ variable or a committed file. Never ask me to paste it into chat.
 .gitignore covers .env.local.
