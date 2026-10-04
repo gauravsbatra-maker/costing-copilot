@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "test": "node --test tests/budget.test.ts",
+    "test": "node --test tests/costing.test.ts",
     "test:e2e": "playwright test",
     "deploy": "npx @convex-dev/static-hosting deploy"
   },
@@ -20,7 +20,8 @@
     "convex": "^1.46.0",
     "lucide-react": "^1.49.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
