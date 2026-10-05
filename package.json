@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "test": "node --test tests/costing.test.ts",
+    "test": "node --test tests/costing.test.ts tests/brief.test.ts && vitest run",
     "test:e2e": "playwright test",
     "deploy": "npx @convex-dev/static-hosting deploy"
   },
@@ -25,9 +25,12 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "convex-test": "^0.0.60",
     "typescript": "^7.0.2",
-    "vite": "^8.3.2"
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }

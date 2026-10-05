@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState } from 'react';
+import BriefReader from './BriefReader';
 import { readCosting, type Budget, type CostRow, type Figure } from '../shared/costing';
 const format = (value: Figure) => typeof value === 'number' ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(value) : value;
 function Values({ row }: { row: CostRow }) { return <><td>{format(row.cost)}</td><td>{format(row.nw)}</td><td>{format(row.w)}</td></>; }
@@ -23,6 +24,7 @@ export default function App() {
   }
   return <main>
     <header><span className="eyebrow">MILESTONE 1 · YOUR COSTING DATA</span><h1>Read back your costing sheet.</h1><p>Upload one Excel workbook to check its cost heads and figures before going further.</p></header>
+    <BriefReader costHeads={budget?.heads.map(head => head.name) ?? []} />
     <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><p>Only the first visible tab is used. Hidden tabs are ignored.</p><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
     {busy && <p role="status">Reading your workbook…</p>}
     {error && <p className="error" role="alert">{error}</p>}

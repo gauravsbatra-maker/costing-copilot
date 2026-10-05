@@ -8,13 +8,21 @@
  * @module
  */
 
+import type * as brief from "../brief.js";
+import type * as briefLimit from "../briefLimit.js";
+import type * as briefValidators from "../briefValidators.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  brief: typeof brief;
+  briefLimit: typeof briefLimit;
+  briefValidators: typeof briefValidators;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

@@ -1,5 +1,9 @@
-# Costing sheet reader
+# Costing Copilot
 
-Milestone 1 only: select an Excel workbook and inspect the first visible tab’s cost heads, line items and pre-GST figures. Files stay in browser memory; nothing is sent to Convex or saved. Formulas use the values last saved by Excel; missing values are shown as “could not read”.
+Milestone 1 reads the first visible Excel tab in browser memory; no workbook is sent to Convex or OpenAI. Excel formulas use the last saved values, with unreadable cells flagged.
 
-Run `npm install`, then `npm run dev`, and open http://127.0.0.1:5173. Run `npm test`, `npm run build` and `npm run test:e2e` to check the reader (start the app before browser tests). The existing Convex connection and hosting settings remain in place.
+Milestone 2 adds a pasted WhatsApp brief. A Convex action sends only this text as user input to OpenAI, using OPENAI_API_KEY from Convex environment variables, and returns editable requirements with source text. Missing or unsupported fields are flagged. No pricing or saving is added. Requirements and edits disappear on refresh. Convex stores only an operational call-limit row with up to 30 recent timestamps; this is a deployment-wide rolling-hour limit, including failed attempts.
+
+Run `npm install`, `npx convex dev --once`, then `npm run dev`; open the address printed by Vite. Set OPENAI_API_KEY in the development Convex dashboard before reading briefs. No keys belong in local files or chat.
+
+Checks: `npm test`, `npm run build`, then `TEST_BASE_URL=http://127.0.0.1:5173 npm run test:e2e` (substitute the running app’s port). The browser brief test sends a made-up brief through the real development action and OpenAI; backend tests simulate provider replies to check failure cases and the 30-call limit without spending AI calls. Tests never use client files. Existing Convex settings and hosting remain in place.
