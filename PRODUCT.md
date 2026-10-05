@@ -27,7 +27,7 @@ Trust moment: the project head sees a number they recognise from their own recen
 Login: asked only after the first value.
 ## 5. v1
 Does: takes a WhatsApp text or PDF brief plus one uploaded Excel costing sheet, structures the requirement, produces a first-pass project cost range with major cost heads and the source of each number visible, and lets the project head correct the result. Offers login after the first value, only to save work.
-Doesn't: require login before first value; export a finished proposal; fetch live vendor prices; connect to vendors; read voice notes or email; use approved rate-sheet libraries; manage projects end-to-end; automate negotiations, approvals or client communication.
+Doesn't: require login before first value; export a finished proposal; fetch live vendor prices; connect to vendors; read voice notes or email; use approved rate-sheet libraries; manage projects end-to-end; automate negotiations, approvals or client communication. No export: no PDF, no Excel, nothing sent to anyone. Without a login nothing is stored; the proposal lasts only for the session. Saving a proposal, with its brief and source sheet, needs a login. Download (PDF and Excel together) is a later milestone.
 Shown on screen: Please note: to store data, logging in is mandatory. Any data generated for testing without login will not be stored.
 Day-one test: can a project head upload the brief and one costing sheet, see a believable number in under five minutes, understand where it came from, and correct it? If yes, v1 has done its job.
 ## 6. Riskiest guess
