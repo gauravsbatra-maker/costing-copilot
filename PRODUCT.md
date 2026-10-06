@@ -35,6 +35,7 @@ The guess: a project head can upload one real client brief and one recent Excel 
 How I test it (30 minutes, no code): take one real past client brief and one real costing sheet from a recently executed project. Give both to ChatGPT and ask it to structure the brief into major cost heads, map the past costs to those heads, show the source of each number, flag assumptions and missing information, and produce a defensible cost range with contingency. Then compare it with what an experienced project head would estimate manually.
 Pass: the total lands within 10% of the project head's own estimate, and every cost head shows its source.
 What happened: not run yet. If the costing sheet is too messy, too specific or too incomplete to support the estimate, we find out before building.
+Tested 6 Oct 2026 on a real wedding brief + the 19.08 Tara sheet: tool total ₹8.41 crore pre-GST vs my own estimate ₹8.56 crore, 1.8% apart, inside the ±10% pass line.
 ## 7. Milestones
 Sequence: read, understand, map, price, explain uncertainty, correct, trust, save.
 1. I can upload one Excel costing sheet and see its cost heads and values read back correctly.
