@@ -1,6 +1,7 @@
 import { Fragment, useRef, useState } from 'react';
 import BriefReader from './BriefReader';
-import { readCosting, type Budget, type CostRow, type Figure } from '../shared/costing';
+import { readProposalSheet } from '../shared/proposal';
+import {  type Budget, type CostRow, type Figure } from '../shared/costing';
 const format = (value: Figure) => typeof value === 'number' ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(value) : value;
 function Values({ row }: { row: CostRow }) { return <><td>{format(row.cost)}</td><td>{format(row.nw)}</td><td>{format(row.w)}</td></>; }
 export default function App() {
@@ -17,15 +18,15 @@ export default function App() {
     try {
       if (!/\.(xlsx|xls|xlsm|xlsb)$/i.test(file.name)) throw new Error('Please choose an Excel workbook (.xlsx, .xls, .xlsm or .xlsb).');
       if (file.size > 25 * 1024 * 1024) throw new Error('Please choose a workbook smaller than 25 MB.');
-      const result = readCosting(await file.arrayBuffer());
+      const result = readProposalSheet(await file.arrayBuffer());
       if (request.current === id) setBudget(result);
     } catch (e) { if (request.current === id) setError(e instanceof Error ? e.message : 'could not read this workbook'); }
     finally { if (request.current === id) setBusy(false); }
   }
   return <main>
     <header><span className="eyebrow">MILESTONE 1 · YOUR COSTING DATA</span><h1>Read back your costing sheet.</h1><p>Upload one Excel workbook to check its cost heads and figures before going further.</p></header>
-    <BriefReader costHeads={budget?.heads.map(head => head.name) ?? []} />
-    <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><p>Only the first visible tab is used. Hidden tabs are ignored.</p><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
+    <BriefReader costHeads={budget?.heads.map(head => head.name) ?? []} budget={budget} />
+    <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><p>Only the Overall WIP tab is used.</p><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
     {busy && <p role="status">Reading your workbook…</p>}
     {error && <p className="error" role="alert">{error}</p>}
     {budget && <section aria-label="Costing results"><div className="result-heading"><div><h2>{budget.sheet}</h2><p>{fileName} · Excel figures as supplied · Pre-GST only</p></div><span>Amounts in Rs</span></div><p className="hint">Click a cost head to see its line items. “could not read” means the sheet did not provide a readable value; nothing is estimated.</p><div className="table-wrap"><table><thead><tr><th scope="col">Cost head / line item</th><th scope="col">Cost (W/O GST)</th><th scope="col">NW</th><th scope="col">W</th></tr></thead><tbody>

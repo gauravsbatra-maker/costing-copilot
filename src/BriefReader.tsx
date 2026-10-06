@@ -1,3 +1,6 @@
+import CostingReview from './CostingReview';
+import type { Budget } from '../shared/costing';
+import { numberIn } from '../shared/proposal';
 import { useRef, useState } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
 import { ConvexError } from 'convex/values';
@@ -12,7 +15,7 @@ function Editable({ label, field, onChange }: { label: string; field: BriefField
     {field.status === 'corrected' && <small>Your correction · kept only in this page</small>}
   </label>;
 }
-export default function BriefReader({ costHeads }: { costHeads: string[] }) {
+export default function BriefReader({ costHeads, budget }: { costHeads: string[]; budget: Budget | null }) {
   const [client] = useState(() => new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL));
   const [brief, setBrief] = useState('');
   const [result, setResult] = useState<Requirements | null>(null);
@@ -28,7 +31,7 @@ export default function BriefReader({ costHeads }: { costHeads: string[] }) {
     finally { if (request.current === id) setBusy(false); }
   }
   function editField(key: FieldKey, field: BriefField) { setResult(prev => prev && { ...prev, fields: { ...prev.fields, [key]: field } }); }
-  function editFunction(index: number, key: 'day' | 'name' | 'guests', field: BriefField) { setResult(prev => prev && { ...prev, functions: prev.functions.map((row, i) => i === index ? { ...row, [key]: field } : row) }); }
+  function editFunction(index: number, key: 'day' | 'name' | 'guests', field: BriefField) { setDrivers({}); setResult(prev => prev && { ...prev, functions: prev.functions.map((row, i) => i === index ? { ...row, [key]: field } : row) }); }
   function editRule(index: number, key: 'head' | 'rule', field: BriefField) { setResult(prev => prev && { ...prev, scalingRules: prev.scalingRules.map((row, i) => i === index ? { ...row, [key]: field } : row) }); }
   const heads = result ? Array.from(new Set([...costHeads, ...result.scalingRules.map(row => row.head.value).filter(Boolean)])) : [];
   const rules = result ? heads.map(name => ({ name, index: result.scalingRules.findIndex(row => row.head.value === name) })) : [];
@@ -47,10 +50,11 @@ export default function BriefReader({ costHeads }: { costHeads: string[] }) {
       {result.scalingRules.map((row, index) => <div className="rule-grid" key={index}><Editable label={`Cost head ${index + 1}`} field={row.head} onChange={field => editRule(index, 'head', field)} /><Editable label={`Scaling rule ${index + 1}`} field={row.rule} onChange={field => editRule(index, 'rule', field)} /></div>)}
       {rules.filter(row => row.index < 0).map(row => <div className="worksheet-rule" key={row.name}><strong>{row.name}</strong><p className="amber">Missing: no scaling rule for this Excel cost head was stated in the brief.</p><button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, scalingRules: [...prev.scalingRules, { head: { value: row.name, status: 'corrected', source: '', reason: '' }, rule: missingField() }] })}>Enter a rule for {row.name}</button></div>)}
       <button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, scalingRules: [...prev.scalingRules, { head: missingField(), rule: missingField() }] })}>Add a missing cost head</button>
-      {hasHeadcountConflict(result) && <div className="headcount-flag" role="alert"><h3>Headcounts differ</h3><p>The benchmark headcount differs from the brief’s guest counts. Which headcount drives each cost head? Nothing has been chosen or calculated.</p>
+      {(hasHeadcountConflict(result) || new Set(result.functions.map(f => numberIn(f.guests.value)).filter(n => n !== null)).size > 1) && <div className="headcount-flag" role="alert"><h3>Headcounts differ</h3><p>The guest counts or benchmark differ. Which headcount drives each cost head? Choose a function below, or enter another headcount here.</p>
         {!heads.length && <p>Add the cost heads stated in the brief or upload your Excel sheet to identify the heads that need a choice.</p>}
         {heads.map(head => <label className="brief-field" key={head}><span>Headcount driving {head}</span><input aria-label={`Headcount driving ${head}`} value={drivers[head] ?? ''} placeholder="Choose the function and headcount, or explain the basis" onChange={e => setDrivers(prev => ({ ...prev, [head]: e.target.value }))} />{!drivers[head]?.trim() && <small className="amber">Missing: which headcount should drive {head}?</small>}</label>)}
-      </div>}
+    </div>}
+      {budget && <CostingReview key={JSON.stringify(result)} budget={budget} requirements={result} drivers={drivers} setDrivers={setDrivers} />}
     </div>}
   </section>;
 }

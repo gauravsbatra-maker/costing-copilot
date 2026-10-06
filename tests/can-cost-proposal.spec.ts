@@ -1,0 +1,26 @@
+import {test,expect} from '@playwright/test';
+import * as XLSX from 'xlsx';
+import {validateRequirements} from '../shared/brief';
+import {detailedBrief,detailedExtraction} from './fixtures/brief';
+test('confirm requirements, choose ten headcounts, price from sheet rows and clear stale proposals',async({page})=>{
+ const r=validateRequirements(detailedExtraction(),detailedBrief);
+ await page.route('**/api/action',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'success',value:r})}));
+ const heads=['Taj Hotel Expenses','Bar Tenders','Guests Transfer (Toyota Crysta)','Entertainment','Technicals','Decor','Licenses & Permissions','Graphic Design & Printables','Photo / Video','Other Costs'];
+ const rows:unknown[][]=[['Sr No','Description','Qty','Days','Total','Rate','Cost'],[null,null,null,null,null,null,'W/0 GST','NW','W']];
+ heads.forEach((name,i)=>{rows.push([i+1,name,null,null,null,null,1000,0,1000]);if(i===0)rows.push([null,'Oct 24 - Lunch',100,1,100,8,800,0,800],[null,'Oct 24 - Sangeet',100,1,100,2,200,0,200],[null,'Oct 25 - High Tea',100,1,100,5,500,0,500]);});
+ rows.push([null,'Total',null,null,null,null,10000,0,10000]);
+ const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
+ await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+ const cost=page.getByRole('button',{name:'Cost it',exact:true});await expect(cost).toBeDisabled();
+ await page.getByLabel('City',{exact:true}).fill('Jaipur');
+ await page.getByLabel('Function 2 guest count',{exact:true}).fill('999');
+ for(const h of heads)await page.getByLabel(`Choose a function for ${h}`,{exact:true}).selectOption('Dinner: 1000');
+ await page.getByLabel('I confirm the requirements and matching rows.').check(); await expect(cost).toBeEnabled();await cost.click();
+ const raw=page.getByLabel('Raw proposal output');await expect(raw).toContainText('Day 1 · High tea — ₹1,250');await expect(raw).toContainText('Overall WIP · Taj Hotel Expenses · row 4');await expect(raw).toContainText('Accommodation — To quote');await expect(raw).toContainText('Day 1 · After party — To quote');
+ await page.getByLabel('Calculation for Decor',{exact:true}).selectOption('headcount'); await expect(raw).toHaveCount(0);await cost.click();await expect(raw).toBeVisible();
+ await page.getByLabel('Use my reviewed brief’s rooms, room rate and nights. No further season increase on this quoted rate.').check(); await cost.click(); await expect(raw).toContainText('Client brief · rooms, room rate and nights · confirmed by project head');
+ await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Costed first-pass proposal'}).scrollIntoViewIfNeeded();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await page.reload();await expect(raw).toHaveCount(0);await expect(page.getByLabel('Paste the brief')).toHaveValue('');
+});

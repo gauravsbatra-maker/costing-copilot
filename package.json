@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "test": "node --test tests/costing.test.ts tests/brief.test.ts && vitest run",
+    "test": "node --test tests/costing.test.ts tests/brief.test.ts tests/proposal.test.ts && vitest run",
     "test:e2e": "playwright test",
     "deploy": "npx @convex-dev/static-hosting deploy"
   },
