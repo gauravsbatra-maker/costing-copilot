@@ -1,12 +1,14 @@
+import { editProposal, applyLineContingencies, lineKey, inputNumber, type LineEdit } from '../shared/lineEdits';
 import { applyContingencies, contingencyDefaults, contingencyFigure, contingencyReason, type ContingencyChoice } from '../shared/contingency';
 import { suggestedHeadChoices } from '../shared/reviewChoices';
 import { proposalChecks } from '../shared/proposalChecks';
 import { useState } from 'react';
 import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
-import { applyVariance, parsePastTransferGuests, variancePercentage, rangeFigure, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
+import { applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
 export default function CostingReview({ budget, requirements, drivers, setDrivers }: { budget: Budget; requirements: Requirements; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void }) {
-  const [contingencyEntries, setContingencyEntries] = useState<Record<string,string>>({});
+  const [lineEdits, setLineEdits] = useState<Record<string,LineEdit>>({});
+  const changeLine = (key: string, field: keyof LineEdit, value: string) => setLineEdits(prev=>({...prev,[key]:{...prev[key],[field]:value}}));
   const [pastTransferGuestsEntry, setPastTransferGuestsEntry] = useState('');
   const pastTransferGuests = parsePastTransferGuests(pastTransferGuestsEntry);
   const [bases, setBases] = useState<Record<string,Basis>>({});
@@ -24,15 +26,23 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const suggestions = suggestedHeadChoices(budget,requirements);
   const selectedBases = Object.fromEntries(budget.heads.map(h=>[h.name,bases[h.name] ?? suggestions[h.name].basis]));
   const signature = JSON.stringify({budget,requirements,drivers,bases:selectedBases,overrides,useBriefRooms,percentage,varianceSource,pastTransferGuestsEntry});
-  const proposal = generated?.signature === signature ? generated.proposal : null;
+  const originalProposal = generated?.signature === signature ? generated.proposal : null;
+  const proposal = originalProposal ? editProposal(originalProposal,lineEdits) : null;
+  const generate = () => { if(percentage===null)return; setLineEdits({}); setGenerated({signature,proposal:applyVariance(buildProposal(budget,requirements,drivers,selectedBases,overrides,useBriefRooms,pastTransferGuests),percentage,varianceSource)}); };
   const contingencyDefaultsByHead = contingencyDefaults(budget);
   const contingencyChoices: Record<string, ContingencyChoice> = Object.fromEntries((proposal?.heads ?? []).map(h => {
-    const percentage = variancePercentage(`${contingencyEntries[h.name] ?? contingencyDefaultsByHead[h.name] ?? 0}%`);
+    const percentage = variancePercentage(`${lineEdits[lineKey(h.name,0)]?.contingency ?? contingencyDefaultsByHead[h.name] ?? 0}%`);
     return [h.name, {percentage, reason:contingencyReason(contingencyDefaultsByHead[h.name] === 10, percentage ?? 0)}];
   }));
-  const contingenciesValid = Object.values(contingencyChoices).every(c=>c.percentage!==null);
-  const contingent = proposal && contingenciesValid ? applyContingencies(proposal,Object.fromEntries(Object.entries(contingencyChoices).map(([h,c])=>[h,c.percentage!])),mapHead('Transfers',budget)?.name) : null;
-  const checks = proposal ? proposalChecks(budget, requirements, proposal, drivers, selectedBases, bases, overrides, pastTransferGuests, contingencyChoices) : null;
+  const linePercentages = Object.fromEntries((proposal?.heads ?? []).flatMap(h=>h.lines.map((_,i)=>[lineKey(h.name,i),variancePercentage(`${lineEdits[lineKey(h.name,i)]?.contingency ?? contingencyDefaultsByHead[h.name] ?? 0}%`)])));
+  const contingenciesValid = Object.values(linePercentages).every(p=>p!==null);
+  const contingent = proposal && contingenciesValid ? applyLineContingencies(proposal,linePercentages as Record<string,number>,contingencyDefaultsByHead,mapHead('Transfers',budget)?.name) : null;
+  const checks = proposal ? proposalChecks(budget, requirements, proposal, drivers, selectedBases, bases, overrides, pastTransferGuests, contingencyChoices,Object.fromEntries(Object.entries(linePercentages).map(([key,percentage])=>[key,{percentage,reason:contingencyReason(contingencyDefaultsByHead[JSON.parse(key)[0]]===10,percentage??0)}]))) : null;
+  if (checks && proposal) for (const h of proposal.heads) for (const [i,l] of h.lines.entries()) {
+    const edit=lineEdits[lineKey(h.name,i)];
+    if (edit && l.amount===null && (edit.quantity!==undefined || edit.unitCost!==undefined)) checks.missing.push(`${h.name} — ${l.label}: enter a valid quantity and unit cost and confirm the original calculation basis.`);
+
+  }
   const functions = requirements.functions.filter(f => mealKind(f.name.value) !== 'tea');
   const counts = new Set(functions.map(f => numberIn(f.guests.value)).filter(n=>n!==null));
   const conflict = counts.size > 1 || functions.some(f=>numberIn(f.guests.value)===null);
@@ -69,18 +79,36 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     <p>Low and high use the same percentage below and above the current figure. Season increases already included in the midpoint stay separate.</p>
     {cityRequired&&<p className="amber">Enter the event city in the City field before costing.</p>}
     <p>Confirm all accepts the displayed requirements, headcounts, cost bases and matching rows{requirements.fields.rooms.value ? ', including the displayed brief-room pricing' : ''}. You can still edit every choice.</p>
-    <button className="add-detail" type="button" disabled={cityRequired||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={()=>{if(percentage!==null){setConfirmed(true);setGenerated({signature,proposal:applyVariance(buildProposal(budget,requirements,drivers,selectedBases,overrides,useBriefRooms,pastTransferGuests),percentage,varianceSource)});}}}>Confirm all</button>
+    <button className="add-detail" type="button" disabled={cityRequired||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={()=>{if(percentage!==null){setConfirmed(true);generate();}}}>Confirm all</button>
     <label className="confirmation"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I confirm the requirements and matching rows.</label>
-    <button className="read-brief" type="button" disabled={cityRequired||!confirmed||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={()=>{if(percentage!==null)setGenerated({signature,proposal:applyVariance(buildProposal(budget,requirements,drivers,selectedBases,overrides,useBriefRooms,pastTransferGuests),percentage,varianceSource)});}}>Cost it</button>
+    <button className="read-brief" type="button" disabled={cityRequired||!confirmed||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={generate}>Cost it</button>
     {percentage===null&&<p className="amber">Enter a variance percentage to cost this.</p>}
     {benchmarkNeeded&&<p className="amber">Enter the benchmark headcount to scale costs.</p>}
     {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full Overall WIP costing to cost this.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
     {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
-      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{h.name} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=><div className="proposal-line" key={i}>{(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${l.label} · `}{rangeFigure(l.amount,proposal.variancePercentage)}</strong>}{l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{l.calculation}</small>{l.source&&l.original&&<details><summary>{l.source}</summary><p>{l.original?.name} · original pre-GST: {typeof l.original?.cost==='number'?rupees(l.original.cost):'To quote'}{l.original&&'quantity' in l.original?` · sheet quantity: ${l.original.quantity}`:''}</p></details>}{l.source&&!l.original&&<small>{l.source}</small>}</div>)}
-        <label className="brief-field"><span>Contingency %</span><input aria-label={`Contingency % for ${h.name}`} type="number" min="0" max="100" step="any" value={contingencyEntries[h.name] ?? contingencyDefaultsByHead[h.name] ?? 0} onChange={e=>setContingencyEntries(prev=>({...prev,[h.name]:e.target.value}))}/></label>
-        {contingencyChoices[h.name].percentage===null ? <p className="amber">Enter a contingency from 0% to 100% for {h.name}.</p> : <p className="contingency-line">Contingency {contingencyChoices[h.name].percentage}%: {contingencyChoices[h.name].reason}{contingent && contingencyChoices[h.name].percentage! > 0 ? contingent.heads[h.name].reserve ? ` · ${contingencyFigure(contingent.heads[h.name].reserve)}` : ' · To quote; no reserve added until this head is priced.' : ''}</p>}
-      </div>)}
+      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{h.name} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
+        const key=lineKey(h.name,i), original=originalProposal!.heads.find(head=>head.name===h.name)!.lines[i];
+        const edit=lineEdits[key];
+        const pct=linePercentages[key];
+        const defaultPct=contingencyDefaultsByHead[h.name]??0;
+        const changed=l.amount!==original.amount || (edit?.contingency!==undefined && pct!==defaultPct) || (edit?.quantity!==undefined && inputNumber(edit.quantity)!==(original.pricing?.quantity??null)) || (edit?.unitCost!==undefined && inputNumber(edit.unitCost)!==(original.pricing?.unitCost??null));
+        const name=i===0?h.name:`${h.name} · ${l.label}`;
+        const reserve=l.amount!==null && pct!==null ? applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].reserve : null;
+        return <div className="proposal-line" key={i}>
+          {(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${l.label} · `}{l.amount!==null && pct!==null ? contingencyFigure(applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].range) : 'To quote'}</strong>}
+          {l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{l.calculation}</small>
+          {l.source&&l.original&&<details><summary>{l.source}</summary><p>{l.original.name} · original pre-GST: {typeof l.original.cost==='number'?rupees(l.original.cost):'To quote'}{'quantity' in l.original?` · sheet quantity: ${l.original.quantity}`:''}</p></details>}{l.source&&!l.original&&<small>{l.source}</small>}
+          <div className="line-inputs">
+            <label className="brief-field"><span>Quantity</span><input aria-label={`Quantity for ${name}`} type="number" min="0" step="any" value={edit?.quantity ?? original.pricing?.quantity ?? ''} onChange={e=>changeLine(key,'quantity',e.target.value)}/></label>
+            <label className="brief-field"><span>Unit cost (₹)</span><input aria-label={`Unit cost for ${name}`} type="number" min="0" step="any" value={edit?.unitCost ?? original.pricing?.unitCost ?? ''} onChange={e=>changeLine(key,'unitCost',e.target.value)}/></label>
+            <label className="brief-field"><span>Contingency %</span><input aria-label={`Contingency % for ${name}`} type="number" min="0" max="100" step="any" value={edit?.contingency ?? defaultPct} onChange={e=>changeLine(key,'contingency',e.target.value)}/></label>
+          </div>
+          {changed&&<small>Edited by you, was {original.amount===null?'To quote':rupees(Math.round((original.amount*(1+defaultPct/100)+Number.EPSILON)*100)/100)}</small>}
+          <button className="add-detail" type="button" onClick={()=>setLineEdits(prev=>{const next={...prev};delete next[key];return next;})}>Reset to sheet</button>
+          {pct===null ? <p className="amber">Enter a contingency from 0% to 100% for {h.name}.</p> : <p className="contingency-line">Contingency {pct}%: {contingencyReason(defaultPct===10,pct)}{pct>0 ? reserve ? ` · ${contingencyFigure(reserve)}` : ' · To quote; no reserve added until this head is priced.' : ''}</p>}
+        </div>;
+      })}</div>)}
       {checks && <section aria-label="Check before you send"><h3>Check before you send</h3>
         <h4>Missing information</h4>{checks.missing.length ? <ul>{checks.missing.map((text,i)=><li key={i}>{text}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
         <h4>Uncertain costs</h4>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{text}</li>)}</ul> : <p>No uncertain costs flagged.</p>}

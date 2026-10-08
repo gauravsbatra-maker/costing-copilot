@@ -3,7 +3,7 @@ import { readCosting, type Budget, type CostHead, type CostRow } from './costing
 import type { Requirements } from './brief.ts';
 export type ProposalRow = CostRow & { quantity?: number; rate?: number };
 export type Basis = 'fixed' | 'headcount';
-export type Line = { label: string; amount: number | null; source: string | null; original?: ProposalRow; headcount: number | null; calculation: string };
+export type Line = { label: string; amount: number | null; source: string | null; original?: ProposalRow; headcount: number | null; calculation: string; pricing?: { quantity: number; unitCost: number; multiplier: number } };
 export type Proposal = { heads: { name: string; headcount: number | null; lines: Line[]; amount: number | null }[]; toQuote: Line[]; total: number };
 const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 export function numberIn(s: string): number | null {
@@ -88,11 +88,11 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
   const premiumMatch = /^\+?(\d+(?:\.\d+)?)\s*%/.exec(premiumText.trim());
   const premium = premiumMatch ? Number(premiumMatch[1]) / 100 : 0;
   const quote = (label: string, reason: string, headcount: number | null = null): Line => ({ label, amount: null, source: null, headcount, calculation: reason });
-  const price = (label: string, head: CostHead, row: ProposalRow, multiplier: number | null, headcount: number | null, calculation: string): Line => {
+  const price = (label: string, head: CostHead, row: ProposalRow, multiplier: number | null, headcount: number | null, calculation: string, quantity = 1, divisor = 1): Line => {
     if (typeof row.cost !== 'number' || row.cost < 0 || multiplier === null || !Number.isFinite(multiplier)) return quote(label, 'No readable sheet cost or confirmed calculation basis.', headcount);
     const amount = money(row.cost * multiplier);
     if (!Number.isSafeInteger(Math.round(amount * 100))) return quote(label, 'Cost is too large to calculate safely.', headcount);
-    return { label, amount, source: `Overall WIP · ${head.name} · row ${row.row}`, original: row, headcount, calculation };
+    return { label, amount, source: `Overall WIP · ${head.name} · row ${row.row}`, original: row, headcount, calculation, pricing: { quantity, unitCost: row.cost / divisor, multiplier: multiplier / (quantity / divisor) } };
   };
   const food = mapHead('Food', budget);
   const transfers = mapHead('Transfers', budget);
@@ -109,7 +109,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
       const validPastCount = pastTransferGuests !== null && Number.isSafeInteger(pastTransferGuests) && pastTransferGuests > 0;
       const calculation = `Sheet transfer cost × ${headcount ?? 'missing out-of-town count'} ÷ past transfer guests ${validPastCount ? pastTransferGuests : 'missing'}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`;
       const line = validPastCount
-        ? price(head.name, head, head, headcount !== null ? headcount / pastTransferGuests! * applyPremium : null, headcount, calculation)
+        ? price(head.name, head, head, headcount !== null ? headcount / pastTransferGuests! * applyPremium : null, headcount, calculation, headcount!, pastTransferGuests!)
         : quote(head.name, 'Guests the past transfers covered is missing or invalid. Enter a positive whole guest count.', headcount);
       lines = [{ ...line, source: `Overall WIP · ${head.name} · row ${head.row}`, original: head }];
     } else if (head.row === food?.row && requirements.functions.length) {
@@ -120,12 +120,12 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
         const guests = kind === 'tea' ? (lunches.length === 1 ? numberIn(lunches[0].guests.value) : null) : numberIn(f.guests.value);
         const row = head.items.find(item => item.row === meals[i]) as ProposalRow | undefined;
         if (!row || !kind) return quote(label, 'No confirmed matching meal row in the sheet.', guests);
-        return price(label, head, row, guests !== null && row.quantity ? guests / row.quantity * applyPremium : null, guests, `Sheet pre-GST cost ÷ sheet quantity ${row.quantity ?? 'missing'} × ${guests ?? 'missing'} guests${kind === 'tea' ? ' (same as lunch)' : ''}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`);
+        return price(label, head, row, guests !== null && row.quantity ? guests / row.quantity * applyPremium : null, guests, `Sheet pre-GST cost ÷ sheet quantity ${row.quantity ?? 'missing'} × ${guests ?? 'missing'} guests${kind === 'tea' ? ' (same as lunch)' : ''}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`, guests!, row.quantity!);
       });
       // Alcohol is a separate historical line; it is not silently bundled into meals.
-      for (const row of head.items.filter(r => /alcohol/i.test(r.name))) lines.push(price(row.name, head, row, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`));
+      for (const row of head.items.filter(r => /alcohol/i.test(r.name))) lines.push(price(row.name, head, row, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`, basis === 'headcount' ? headcount! : 1, basis === 'headcount' ? benchmark! : 1));
     } else {
-      lines = [price(head.name, head, head, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, `${basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`)];
+      lines = [price(head.name, head, head, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, `${basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`, basis === 'headcount' ? headcount! : 1, basis === 'headcount' ? benchmark! : 1)];
     }
     return { name: head.name, headcount, lines, amount: lines.some(l => l.amount !== null) ? money(lines.reduce((sum, l) => sum + (l.amount ?? 0), 0)) : null };
   });
@@ -140,7 +140,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     if (useBriefRooms && amount !== null && Number.isSafeInteger(Math.round(amount * 100))) {
       // The project head explicitly authorizes this exception to sheet-only pricing.
       for (let i=extras.length-1;i>=0;i--) if (/accommodation|rooms|hotel stay/i.test(extras[i].label)) extras.splice(i,1);
-      extras.push({label, amount, source:'Client brief · rooms, room rate and nights · confirmed by project head',headcount:null,calculation:`${rooms} rooms × ${rupees(rate!)} per room night × ${nights} nights; quoted room rate, no further season increase`});
+      extras.push({label, amount, source:'Client brief · rooms, room rate and nights · confirmed by project head',headcount:null,pricing:{quantity:rooms!,unitCost:rate!,multiplier:nights!},calculation:`${rooms} rooms × ${rupees(rate!)} per room night × ${nights} nights; quoted room rate, no further season increase`});
     } else if (!extras.some(l=>/accommodation|rooms|hotel stay/i.test(l.label))) extras.push(quote(label, 'No accommodation row in the uploaded sheet.'));
   }
   if (!food) extras.push(...requirements.functions.map(f => quote(`${f.day.value} · ${f.name.value}`, 'No matching food head in the uploaded sheet.')));

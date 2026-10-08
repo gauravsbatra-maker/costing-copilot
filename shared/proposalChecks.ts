@@ -2,12 +2,13 @@ import { fieldLabels, type BriefField, type FieldKey, type Requirements } from '
 import type { Budget } from './costing.ts';
 import { mapHead, mappedHeads, mealKind, numberIn, ruleForHead, type Basis, type RangedProposal } from './proposal.ts';
 import { suggestedHeadChoices } from './reviewChoices.ts';
+import { lineKey } from './lineEdits.ts';
 import type { ContingencyChoice } from './contingency.ts';
 
 export type ProposalChecks = { assumptions: string[]; summary: string[]; missing: string[]; uncertain: string[] };
 
 // Explain the existing result only. Never calculate or change a price here.
-export function proposalChecks(budget: Budget, requirements: Requirements, proposal: RangedProposal, drivers: Record<string, string>, bases: Record<string, Basis>, editedBases: Record<string, Basis> = {}, overrides: Record<number, number | null> = {}, pastTransferGuests: number | null = null, contingencies: Record<string, ContingencyChoice> = {}): ProposalChecks {
+export function proposalChecks(budget: Budget, requirements: Requirements, proposal: RangedProposal, drivers: Record<string, string>, bases: Record<string, Basis>, editedBases: Record<string, Basis> = {}, overrides: Record<number, number | null> = {}, pastTransferGuests: number | null = null, contingencies: Record<string, ContingencyChoice> = {}, lineContingencies: Record<string, ContingencyChoice> = {}): ProposalChecks {
   const checks: ProposalChecks = { assumptions: [], summary: [], missing: [], uncertain: [] };
   const food = mapHead('Food', budget)?.name ?? 'Unmatched requirements (food)';
   const transfers = mapHead('Transfers', budget)?.name ?? 'Unmatched requirements (transfers)';
@@ -93,8 +94,12 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
   checks.assumptions.push('All cost heads — Figures are before GST; tax is not included. Historical sheet costs are used as a reference, not current vendor quotes.');
   checks.summary = assumptionSummary(budget, requirements, proposal, drivers, bases, overrides, pastTransferGuests);
   const groupedContingencies = new Map<string, string[]>();
-  for (const head of proposal.heads) {
-    const choice = contingencies[head.name];
+  const contingencyHeads = proposal.heads.flatMap(head => {
+    const choices=head.lines.map((_,i)=>lineContingencies[lineKey(head.name,i)]);
+    if (!choices.some(c=>c && c.percentage!==contingencies[head.name]?.percentage)) return [{head,choice:contingencies[head.name]}];
+    return head.lines.map((line,i)=>({head:{...head,name:`${head.name} · ${line.label}`,amount:line.amount},choice:choices[i]??contingencies[head.name]}));
+  });
+  for (const {head,choice} of contingencyHeads) {
     if (!choice) continue;
     if (choice.percentage === null || !Number.isFinite(choice.percentage) || choice.percentage < 0 || choice.percentage > 100) {
       checks.missing.push(`${head.name} — Contingency %: missing or invalid. Enter 0% to 100% before using the total.`);

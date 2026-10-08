@@ -28,11 +28,17 @@
 - Add an empty “Guests the past transfers covered” field. Only transfers use sheet cost × out-of-town guests ÷ this past count, keeping existing seasonal and range percentages. Missing or invalid counts leave transfers To quote and appear in the checklist; transfers never use the historical event guest count as their divisor.
 - All 40 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original costing sheet, checked empty and filled transfer counts and clearing the field, and confirmed every other head and source unchanged at desktop and phone widths. Real inputs and captured output remain outside the repo.
 - User approved committing and pushing the proposal clean-up, checklist and transfer-count correction. Deployment was not requested.
-## Active milestone: 6 — explain and apply contingency
+## Previous milestone: 6 — explain and apply contingency
 - Add editable “Contingency %” inputs under each proposal head: 10% for Guests Transfer and 0% elsewhere.
 - Show each reserve and its reason separately under the affected head and in “Assumptions and choices”. Increase both ends of that head’s existing range; add rounded reserves to the original pre-GST total.
 - Keep source prices, source rows, line ranges, pre-fill, city inputs and the transfer past-guest field unchanged. To quote heads receive no priced reserve; invalid percentages flag missing information and hide the numeric total.
 - All 42 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original sheet with the past-transfer count filled, checked the new reserve and total at desktop and phone widths, and restored the previous figures by setting contingency to zero. Real inputs and captured output remain outside the repo.
 - User approved committing and pushing milestone 6 contingency changes. Deployment was not requested.
+## Active milestone: 7 — edit proposal lines in place
+- Add editable quantity, unit cost and contingency to every proposal line, keeping the original calculation and source rows as the reset baseline.
+- Recalculate line prices, head ranges and the pre-GST total in browser code from the existing proposal; no additional AI call or file read. Mark edited lines and offer Reset to sheet for each line.
+- Preserve pre-filled review choices, city and past-transfer inputs, and the checklist layout. Keep individual contingency choices visible in its existing assumptions list.
+- All 43 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original sheet with the past-transfer count filled, changed transfer contingency to 20%, and restored the original 10% total through Reset at desktop and phone widths. Real inputs and captured output remain outside the repo.
+- User approved committing and pushing milestone 7 line-editing changes. Deployment was not requested.
 ## Parked
 None.

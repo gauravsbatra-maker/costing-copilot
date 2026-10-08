@@ -1,3 +1,4 @@
+import { editProposal, applyLineContingencies, lineKey } from '../shared/lineEdits.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePastTransferGuests, applyVariance, costRange, variancePercentage, rangeFigure, rawProposal, buildProposal, mealKind, mapHead, readProposalSheet } from '../shared/proposal.ts';
@@ -273,4 +274,37 @@ test('contingencies round each reserve to cents, preserve zero-contingency total
  assert.equal(result.heads['Guests Transfer'].range,null);assert.equal(result.heads['Guests Transfer'].reserve,null);
  const zero=applyContingencies(p,{Decor:0,'Guests Transfer':10},'Guests Transfer');
  assert.deepEqual(zero.total,{low:97.51,high:102.51,midpoint:100.01});
+});
+
+
+test('line edits preserve seasonal and room factors, source rows, other lines, and exact reset amounts', () => {
+ const r=requirements();r.fields.seasonalPremium={value:'+10% across all heads',status:'corrected',source:'+10% across all heads',reason:''};
+ const transfer={...head,row:20,name:'Guests Transfer (Toyota Crysta)',cost:12000,items:[]};
+ const b={...budget,heads:[head,transfer,{...head,row:21,name:'Other Costs',items:[]}]};
+ const original=applyVariance(buildProposal(b,r,{'Taj Hotel Expenses':'Dinner: 1000'}, {}, {},true,60),10,'Client brief');
+ const snapshot=structuredClone(original), defaults=contingencyDefaults(b), key=lineKey(transfer.name,0);
+ assert.deepEqual(editProposal(original,{}),original);
+ const baseline=applyLineContingencies(original,{},defaults,transfer.name);
+ const c20=applyLineContingencies(editProposal(original,{[key]:{contingency:'20'}}),{[key]:20},defaults,transfer.name);
+ assert.deepEqual(c20.heads[transfer.name].range,{low:17820,high:21780,midpoint:19800});
+ const quantities=editProposal(original,{[key]:{quantity:'150',unitCost:'250'}});
+ assert.equal(quantities.heads[1].amount,41250); // 150 × (12,000 ÷ 60 replaced with 250) × unchanged 1.1.
+ assert.deepEqual(quantities.heads[0],original.heads[0]);assert.deepEqual(quantities.heads[2],original.heads[2]);
+ assert.equal(quantities.heads[1].lines[0].source,original.heads[1].lines[0].source);
+ assert.deepEqual(quantities.heads[1].lines[0].original,original.heads[1].lines[0].original);
+ const roomIndex=original.heads[2].lines.findIndex(l=>l.source?.startsWith('Client brief'));
+ const room=original.heads[2].lines[roomIndex];
+ assert.equal(editProposal(original,{[lineKey('Other Costs',roomIndex)]:{quantity:'1'}}).heads[2].lines[roomIndex].amount,room.pricing!.unitCost*room.pricing!.multiplier);
+ const missing=editProposal(original,{[key]:{unitCost:''}});
+ assert.equal(missing.heads[1].amount,null);assert(missing.toQuote.some(l=>l.label===transfer.name));
+ assert.equal(editProposal(original,{[key]:{quantity:'0'}}).heads[1].amount,0);
+ assert.deepEqual(applyLineContingencies(editProposal(original,{}),{},defaults,transfer.name),baseline);
+ assert.deepEqual(original,snapshot);
+ const missingBasis=applyVariance(buildProposal(b,r,{}, {}, {},true),10,'Client brief');
+ assert.equal(editProposal(missingBasis,{[key]:{quantity:'75',unitCost:'200'}}).heads[1].amount,null);
+ const mealKey=lineKey(head.name,1);
+ const mixed=applyLineContingencies(original,{[mealKey]:20},defaults,transfer.name);
+ const meal=original.heads[0].lines[1].amount!;
+ assert.equal(mixed.total.midpoint,baseline.total.midpoint+Math.round(meal*.2*100)/100);
+ assert.deepEqual(mixed.heads[transfer.name],baseline.heads[transfer.name]);
 });
