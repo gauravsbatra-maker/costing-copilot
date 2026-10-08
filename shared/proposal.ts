@@ -77,7 +77,11 @@ export function matchMeals(budget: Budget, requirements: Requirements): Record<n
 }
 const money = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 export const rupees = (n: number) => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(n)}`;
-export function buildProposal(budget: Budget, requirements: Requirements, drivers: Record<string, string>, bases: Record<string, Basis>, overrides: Record<number, number | null>, useBriefRooms = false): Proposal {
+export function parsePastTransferGuests(text: string): number | null {
+  const value = /^\d+(?:\.\d+)?$/.test(text.trim()) ? Number(text.trim()) : NaN;
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+export function buildProposal(budget: Budget, requirements: Requirements, drivers: Record<string, string>, bases: Record<string, Basis>, overrides: Record<number, number | null>, useBriefRooms = false, pastTransferGuests: number | null = null): Proposal {
   const benchmark = numberIn(requirements.fields.benchmarkHeadcount.value);
   const meals = { ...matchMeals(budget, requirements), ...overrides };
   const premiumText = requirements.fields.seasonalPremium.value;
@@ -91,15 +95,24 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     return { label, amount, source: `Overall WIP · ${head.name} · row ${row.row}`, original: row, headcount, calculation };
   };
   const food = mapHead('Food', budget);
+  const transfers = mapHead('Transfers', budget);
   const heads = budget.heads.map(head => {
-    const headcount = numberIn(drivers[head.name] ?? '') ?? (new Set(requirements.functions.map(f => numberIn(f.guests.value))).size === 1 ? numberIn(requirements.functions[0]?.guests.value ?? '') : null);
+    const isTransfers = head.row === transfers?.row;
+    const headcount = isTransfers ? numberIn(requirements.fields.outOfTownGuests.value) : numberIn(drivers[head.name] ?? '') ?? (new Set(requirements.functions.map(f => numberIn(f.guests.value))).size === 1 ? numberIn(requirements.functions[0]?.guests.value ?? '') : null);
     const rule = ruleForHead(head,budget,requirements);
     const basis = bases[head.name] ?? defaultBasis(rule);
     const globalPremium = /across all heads|all heads/i.test(`${premiumText} ${requirements.fields.seasonalPremium.source}`);
     const needsPremium = globalPremium || /seasonal|premium/i.test(rule);
     const applyPremium = needsPremium ? (premiumMatch ? 1 + premium : /no|none|0/i.test(premiumText) ? 1 : NaN) : 1;
     let lines: Line[];
-    if (head.row === food?.row && requirements.functions.length) {
+    if (isTransfers) {
+      const validPastCount = pastTransferGuests !== null && Number.isSafeInteger(pastTransferGuests) && pastTransferGuests > 0;
+      const calculation = `Sheet transfer cost × ${headcount ?? 'missing out-of-town count'} ÷ past transfer guests ${validPastCount ? pastTransferGuests : 'missing'}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`;
+      const line = validPastCount
+        ? price(head.name, head, head, headcount !== null ? headcount / pastTransferGuests! * applyPremium : null, headcount, calculation)
+        : quote(head.name, 'Guests the past transfers covered is missing or invalid. Enter a positive whole guest count.', headcount);
+      lines = [{ ...line, source: `Overall WIP · ${head.name} · row ${head.row}`, original: head }];
+    } else if (head.row === food?.row && requirements.functions.length) {
       lines = requirements.functions.map((f, i) => {
         const label = `${f.day.value} · ${/high\s*tea.*ceremon/i.test(f.name.value) ? 'High tea (food only)' : f.name.value}`;
         const kind = mealKind(f.name.value);

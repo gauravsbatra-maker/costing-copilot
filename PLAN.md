@@ -9,7 +9,7 @@
 - No export, login, brief or sheet storage. Real inputs stay outside the repo.
 - Verified calculations, all 37 checks, and the full local flow on the supplied brief and costing sheet; raw output captured outside the repo.
 - User approved commit, push and deployment; verify the live costing flow after deployment.
-## Active milestone: 4 — show cost ranges
+## Previous milestone: 4 — show cost ranges
 - Keep milestones 1–3 calculations and extraction unchanged; existing amounts remain midpoints.
 - Show midpoint ± the brief’s stated variance for every priced head, line and pre-GST total; preserve all source lines.
 - If variance is missing or unreadable, ask for a percentage and block costing until supplied (0–100%, including zero).
@@ -20,5 +20,13 @@
 - Local browser verification is pending: the user’s local server is running on port 5173, but this restricted session denied Chrome launch. The saved browser check includes the missing-variance question and stale-range clearing.
 - Real Tara sheet calculations checked against the saved wedding-brief reading and previous reviewed choices; raw output and the no-edit Confirm all browser script are outside the repo in /private/tmp. This is not a fresh full-flow verification.
 - Await full local browser proof and user confirmation before commit, push or deploy.
+## Active milestone: 5 — flag assumptions, missing information and uncertain costs
+- Add “Check before you send” above the pre-GST total, with plain-language entries naming the affected cost heads.
+- Explain displayed headcounts, cost bases, pre-filled fields and schedules, meal-row matching, season increases, brief-room pricing and range choices.
+- Show missing information and uncertain costs first; group assumptions by shared rule and affected heads, with all original details behind a “Show all assumptions” toggle that starts closed.
+- List missing or unclear reviewed fields and every unpriced or unsourced cost; preserve sources, pre-fill behaviour, city inputs and all other heads’ calculations.
+- Add an empty “Guests the past transfers covered” field. Only transfers use sheet cost × out-of-town guests ÷ this past count, keeping existing seasonal and range percentages. Missing or invalid counts leave transfers To quote and appear in the checklist; transfers never use the historical event guest count as their divisor.
+- All 40 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original costing sheet, checked empty and filled transfer counts and clearing the field, and confirmed every other head and source unchanged at desktop and phone widths. Real inputs and captured output remain outside the repo.
+- User approved committing and pushing the proposal clean-up, checklist and transfer-count correction. Deployment was not requested.
 ## Parked
 None.

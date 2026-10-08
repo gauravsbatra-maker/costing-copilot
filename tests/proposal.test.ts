@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyVariance, costRange, variancePercentage, rangeFigure, rawProposal, buildProposal, mealKind, mapHead, readProposalSheet } from '../shared/proposal.ts';
+import { parsePastTransferGuests, applyVariance, costRange, variancePercentage, rangeFigure, rawProposal, buildProposal, mealKind, mapHead, readProposalSheet } from '../shared/proposal.ts';
 import { validateRequirements } from '../shared/brief.ts';
 import { detailedBrief, detailedExtraction } from './fixtures/brief.ts';
 import { prepareReview, suggestedHeadChoices } from '../shared/reviewChoices.ts';
+import { proposalChecks } from '../shared/proposalChecks.ts';
 import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
@@ -132,4 +133,105 @@ test('editable review preparation follows an explicit daily flow and preserves t
  assert.equal(reviewed.fields.roomRate.value,'₹8,000/room night');
  assert.equal(reviewed.fields.city.status,original.fields.city.status);
  assert.equal(prepareReview(r,'No daily flow confirmed').functions.length,4);
+});
+
+test('send checklist lists headcount rules, pre-filled fields, every missing detail and every uncertain cost without changing the proposal', () => {
+ const r=requirements();
+ r.fields.city={value:"Client's hometown (city unconfirmed)",status:'corrected',source:'',reason:''};
+ r.fields.dates={value:'',status:'missing',source:'',reason:''};
+ r.fields.outOfTownGuests={value:'75',status:'corrected',source:'75 of the 250',reason:'Use the stated out-of-town count.'};
+ r.functions[1].name.value='High tea + small ceremonies';
+ r.functions[3].day={value:'',status:'missing',source:'',reason:''};
+ r.scalingRules.push({head:{value:'Special fireworks',status:'provided',source:'Special fireworks',reason:''},rule:{value:'',status:'missing',source:'',reason:''}});
+ const b={...budget,heads:[head,{...head,row:20,name:'Guests Transfer (Toyota Crysta)',items:[]},{...head,row:21,name:'Other Costs',items:[]}]};
+ const choices=suggestedHeadChoices(b,r);
+ const drivers=Object.fromEntries(Object.entries(choices).map(([h,c])=>[h,c.driver]));
+ const bases=Object.fromEntries(Object.entries(choices).map(([h,c])=>[h,c.basis]));
+ const p=applyVariance(buildProposal(b,r,drivers,bases,{},true),10,'Client brief · Variance: ±10%');
+ const before=structuredClone({b,r,p,drivers,bases});
+ const checks=proposalChecks(b,r,p,drivers,bases);
+ assert(checks.assumptions.some(s=>s.includes('Guests Transfer (Toyota Crysta) — Transfers use 75 out-of-town guests')&&s.includes('not the historical event guest count')));
+ assert(checks.assumptions.some(s=>s.includes('Pre-filled out-of-town guests: 75')));
+ assert(checks.assumptions.some(s=>s.includes('Taj Hotel Expenses')&&s.includes('High tea uses the same day’s lunch headcount')));
+ assert(checks.assumptions.some(s=>s.includes('Other Costs — Accommodation')&&s.includes('No further seasonal increase')));
+ assert(checks.missing.some(s=>s.startsWith('All cost heads — City: the event city is still unconfirmed')));
+ assert(checks.missing.some(s=>s.startsWith('All cost heads — Dates: missing')));
+ assert(checks.missing.some(s=>s.includes('After party day / date: missing')));
+ assert(checks.missing.some(s=>s.includes('Special fireworks scaling rule: missing')));
+ for(const h of p.heads)for(const line of h.lines.filter(l=>l.amount===null))assert(checks.uncertain.some(s=>s.startsWith(`${h.name} — ${line.label}: To quote; excluded from the total.`)));
+ assert(checks.uncertain.some(s=>s.startsWith('Other Costs — Special fireworks:')));
+ assert(checks.uncertain.some(s=>s.startsWith('Other Costs — Day 1 · Small ceremonies:')));
+ assert.deepEqual({b,r,p,drivers,bases},before);
+});
+
+test('send checklist follows edited choices, flags unclear fields and costs without sources, and clears settled warnings', () => {
+ const r=requirements();r.fields.city={value:'',status:'unclear',source:'',reason:'The event city was not named.'};
+ const b={...budget,heads:[{...head,name:'Decor',items:[]}]};
+ const p=applyVariance(buildProposal(b,r,{Decor:'900'},{Decor:'fixed'},{}),0,'Project head choice · Variance: ±0%');
+ p.heads[0].lines[0].source=null;
+ const checks=proposalChecks(b,r,p,{Decor:'900'},{Decor:'fixed'},{Decor:'fixed'});
+ assert(checks.missing.includes('All cost heads — City: unclear. The event city was not named.'));
+ assert(checks.assumptions.some(s=>s.includes('Decor — Headcount choice: 900. Your entered choice')));
+ assert(checks.assumptions.some(s=>s.includes('Decor — Your cost basis: Keep the historical sheet cost')));
+ assert(checks.uncertain.some(s=>s.startsWith('Decor — Decor: No matching source row is recorded')));
+ r.fields.city={value:'Jaipur',status:'corrected',source:'',reason:''};
+ const settled=proposalChecks(b,r,p,{Decor:'900'},{Decor:'fixed'},{Decor:'fixed'});
+ assert(!settled.missing.some(s=>s.includes('City:')));
+ r.functions=[];r.scalingRules=[];
+ const empty=proposalChecks(b,r,p,{Decor:'900'},{Decor:'fixed'});
+ assert(empty.missing.some(s=>s.includes('Functions and guest counts: missing')));
+ assert(empty.missing.some(s=>s.startsWith('Decor — Scaling rule: missing')));
+});
+
+test('assumption summary groups shared rules and keeps different counts, fixed costs and quoted rooms separate', () => {
+ const r=requirements();
+ r.scalingRules=[['Food','pro rata per head'],['Entertainment','roughly the same'],['All other heads','computed per head and projected up']].map(([name,rule])=>({head:{value:name,status:'provided' as const,source:name,reason:''},rule:{value:rule,status:'provided' as const,source:rule,reason:''}}));
+ r.fields.seasonalPremium={value:'+10% across all heads',status:'provided',source:'+10% across all heads',reason:''};
+ const b={...budget,heads:['Taj Hotel Expenses','Bar Tenders','Technicals','Decor','Entertainment','Guests Transfer (Toyota Crysta)','Other Costs'].map((name,i)=>({...head,name,row:i+3,items:i===0?head.items:[]}))};
+ const suggestions=suggestedHeadChoices(b,r);
+ const drivers=Object.fromEntries(Object.entries(suggestions).map(([h,c])=>[h,c.driver]));
+ const bases=Object.fromEntries(Object.entries(suggestions).map(([h,c])=>[h,c.basis]));
+ const p=applyVariance(buildProposal(b,r,drivers,bases,{},true,700),10,'Client brief · Variance: ±10%');
+ const before=structuredClone({b,r,p,drivers,bases});
+ const checks=proposalChecks(b,r,p,drivers,bases,{}, {},700);
+ assert(checks.summary.includes('Per-person heads use the dinner count of 1,000: Bar Tenders, Technicals, Decor, Other Costs.'));
+ assert(checks.summary.includes('Transfers use 75 out-of-town guests; past transfers covered 700 guests: Guests Transfer (Toyota Crysta).'));
+ assert(checks.summary.includes('Keep the historical sheet cost without scaling by headcount: Entertainment.'));
+ assert.equal(checks.summary.filter(s=>s.startsWith('Seasonal increase')).length,1);
+ assert(checks.summary.includes('Seasonal increase of +10% on all heads, except the quoted room rate: All sheet cost heads.'));
+ assert(checks.assumptions.filter(s=>s.includes('Seasonal increase included')).length>1);
+ assert.deepEqual({b,r,p,drivers,bases},before);
+ drivers.Decor='Dinner: 900';
+ const edited=applyVariance(buildProposal(b,r,drivers,bases,{},true,700),10,'Client brief · Variance: ±10%');
+ const changed=proposalChecks(b,r,edited,drivers,bases,{}, {},700);
+ assert(changed.summary.includes('Per-person heads use the dinner count of 1,000: Bar Tenders, Technicals, Other Costs.'));
+ assert(changed.summary.includes('Per-person heads use your chosen headcount of 900: Decor.'));
+});
+
+test('transfers require their own past guest count, use out-of-town guests, and leave every other head and source unchanged', () => {
+ assert.equal(parsePastTransferGuests('60'),60);
+ for(const text of ['', '0', '-60', '1.5', '60 guests', 'Infinity', '0x3c', '9007199254740992'])assert.equal(parsePastTransferGuests(text),null);
+ const r=requirements();r.fields.seasonalPremium={value:'+10% across all heads',status:'corrected',source:'+10% across all heads',reason:''};
+ const transfer={...head,row:20,name:'Guests Transfer (Toyota Crysta)',cost:12000,items:[]};
+ const b={...budget,heads:[head,transfer,{...head,row:21,name:'Decor',items:[]}]};
+ const drivers={'Taj Hotel Expenses':'Dinner: 1000','Guests Transfer (Toyota Crysta)':'Dinner: 1000',Decor:'Dinner: 1000'};
+ const bases={'Taj Hotel Expenses':'headcount','Guests Transfer (Toyota Crysta)':'fixed',Decor:'headcount'} as const;
+ const empty=buildProposal(b,r,drivers,bases,{},true);
+ assert.equal(empty.heads[1].amount,null);
+ assert(empty.toQuote.some(l=>l.label===transfer.name));
+ assert.equal(empty.heads[1].lines[0].source,'Overall WIP · Guests Transfer (Toyota Crysta) · row 20');
+ const filled=buildProposal(b,r,drivers,bases,{},true,60);
+ assert.equal(filled.heads[1].amount,16500); // 12,000 × 75 ÷ 60 × existing 1.1 seasonal increase.
+ assert.equal(filled.heads[1].headcount,75);
+ assert.equal(filled.heads[1].lines[0].source,empty.heads[1].lines[0].source);
+ assert.deepEqual(filled.heads[0],empty.heads[0]);assert.deepEqual(filled.heads[2],empty.heads[2]);
+ assert.equal(Math.round((filled.total-empty.total)*100)/100,16500);
+ for(const bad of [null,0,-1,1.5,NaN,Infinity,Number.MAX_SAFE_INTEGER+1])assert.equal(buildProposal(b,r,drivers,bases,{},true,bad).heads[1].amount,null);
+ const ranged=applyVariance(filled,10,'Client brief · ±10%');
+ const missing=proposalChecks(b,r,applyVariance(empty,10,'Client brief · ±10%'),drivers,bases);
+ assert(missing.missing.some(s=>s.includes('Guests Transfer (Toyota Crysta) — Guests the past transfers covered: missing')));
+ const reviewed=proposalChecks(b,r,ranged,drivers,bases,{}, {},60);
+ assert(!reviewed.missing.some(s=>s.includes('Guests the past transfers covered')));
+ assert(reviewed.summary.some(s=>s.includes('past transfers covered 60 guests')));
+ assert(!reviewed.summary.some(s=>s.startsWith('Scale per-person sheet costs against')&&s.includes(transfer.name)));
 });
