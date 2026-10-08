@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildProposal, mealKind, mapHead, readProposalSheet } from '../shared/proposal.ts';
+import { applyVariance, costRange, variancePercentage, rangeFigure, rawProposal, buildProposal, mealKind, mapHead, readProposalSheet } from '../shared/proposal.ts';
 import { validateRequirements } from '../shared/brief.ts';
 import { detailedBrief, detailedExtraction } from './fixtures/brief.ts';
+import { prepareReview, suggestedHeadChoices } from '../shared/reviewChoices.ts';
 import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
@@ -73,4 +74,62 @@ test('rooms use a reviewed brief rate only after explicit confirmation and are i
  assert.equal(p.heads[0].amount,p.heads[0].lines.reduce((sum,l)=>sum+(l.amount??0),0));
  assert.equal(p.total,p.heads.flatMap(h=>h.lines).reduce((sum,l)=>sum+(l.amount??0),0));
  assert.equal(buildProposal(b,r,{}, {},{}).heads[0].lines.find(l=>/Accommodation/.test(l.label))?.amount,null);
+});
+
+
+test('variance ranges preserve every midpoint, source and To quote exclusion', () => {
+ const midpoint=buildProposal(budget,requirements(),{}, {}, {});
+ const p=applyVariance(midpoint,10,'Client brief · Variance: ±10%');
+ assert.deepEqual(p.heads,midpoint.heads);
+ assert.equal(p.total,midpoint.total);
+ assert.deepEqual(p.toQuote,midpoint.toQuote);
+ assert.deepEqual(costRange(1250,10),{low:1125,high:1375});
+ assert.equal(rangeFigure(1250,10),'₹1,125–₹1,375 · midpoint ₹1,250');
+ assert.equal(rangeFigure(null,10),'To quote');
+ assert(rawProposal(p).includes('Day 1 · High tea — ₹1,125–₹1,375 · midpoint ₹1,250'));
+ assert(rawProposal(p).includes('Overall WIP · Taj Hotel Expenses · row 7'));
+ assert(rawProposal(p).includes(`Pre-GST total (priced lines only): ${rangeFigure(midpoint.total,10)}`));
+ assert.equal(p.total,p.heads.flatMap(h=>h.lines).reduce((sum,l)=>sum+(l.amount??0),0));
+});
+test('variance requires an explicit readable percentage, including zero; rejects ambiguous or negative ranges', () => {
+ for(const text of ['±10%','10%','+/- 10%','±10% variance on actuals']) assert.equal(variancePercentage(text),10);
+ assert.equal(variancePercentage('0%'),0);
+ assert.equal(variancePercentage('2.5%'),2.5);
+ for(const text of ['','10','-10%','10–20%','101%','10% and 5%','unknown'])assert.equal(variancePercentage(text),null);
+ for(const pct of [-1,101,NaN,Infinity])assert.throws(()=>applyVariance(buildProposal(budget,requirements(),{}, {}, {}),pct,'User choice'));
+ assert.deepEqual(costRange(100.01,2.5),{low:97.51,high:102.51});
+ assert.deepEqual(costRange(100,0),{low:100,high:100});
+});
+
+
+test('review suggestions prefill dinner, out-of-town transfers and fixed bases without changing prices', () => {
+ const r=requirements();r.scalingRules=[['Food','pro rata per head'],['Entertainment','roughly the same'],['All other heads','computed per head and projected up']].map(([name,rule])=>({head:{value:name,status:'provided',source:name,reason:''},rule:{value:rule,status:'provided',source:rule,reason:''}}));
+ const b={...budget,heads:['Taj Hotel Expenses','Guests Transfer (Toyota Crysta)','Entertainment','Decor'].map((name,i)=>({...head,name,row:i+3,items:i===0?head.items:[]}))};
+ const choices=suggestedHeadChoices(b,r);
+ assert.equal(choices.Decor.driver,'Dinner: 1000');assert.equal(choices.Decor.basis,'headcount');
+ assert.equal(choices.Entertainment.basis,'fixed');
+ assert.equal(choices['Guests Transfer (Toyota Crysta)'].driver,'Out-of-town guests: 75');
+ assert.match(choices['Taj Hotel Expenses'].reason,/High tea follows lunch/);
+ const drivers=Object.fromEntries(Object.entries(choices).map(([h,c])=>[h,c.driver]));
+ const bases=Object.fromEntries(Object.entries(choices).map(([h,c])=>[h,c.basis]));
+ assert.deepEqual(buildProposal(b,r,drivers,bases,{}),buildProposal(b,r,{'Taj Hotel Expenses':'1000','Guests Transfer (Toyota Crysta)':'75',Entertainment:'1000',Decor:'1000'},{'Taj Hotel Expenses':'headcount','Guests Transfer (Toyota Crysta)':'headcount',Entertainment:'fixed',Decor:'headcount'},{}));
+});
+test('review suggestions preserve unknown counts rather than choosing between conflicting dinners', () => {
+ const r=requirements();r.functions[6].guests.value='900';r.fields.outOfTownGuests.value='';
+ const b={...budget,heads:[{...head,name:'Decor'},{...head,name:'Guests Transfer (Toyota Crysta)',row:20}]};
+ const choices=suggestedHeadChoices(b,r);assert.equal(choices.Decor.driver,'');assert.equal(choices['Guests Transfer (Toyota Crysta)'].driver,'');
+});
+test('editable review preparation follows an explicit daily flow and preserves the original extraction', () => {
+ const r=requirements();const original=structuredClone(r);
+ r.fields.days.value='2 days';r.fields.outOfTownGuests.value='12 of the 90';r.fields.roomRate.value='₹8,000/room night × 2 nights';
+ r.functions=r.functions.slice(0,4);r.functions.forEach(f=>{f.day.value='';f.day.status='unclear';});
+ r.functions[0].guests.value='90 (25% of list)';r.functions[2].guests.value='360';
+ const before=structuredClone(r);
+ const reviewed=prepareReview(r,'Guest count (per day)\nShow flow: 2 lunches, 2 high teas, 2 dinners, 2 after parties');
+ assert.deepEqual(r,before);assert.equal(reviewed.functions.length,8);
+ assert.equal(reviewed.functions[0].day.value,'Day 1');assert.equal(reviewed.functions[4].day.value,'Day 2');
+ assert.equal(reviewed.functions[4].guests.value,'90');assert.equal(reviewed.fields.outOfTownGuests.value,'12');
+ assert.equal(reviewed.fields.roomRate.value,'₹8,000/room night');
+ assert.equal(reviewed.fields.city.status,original.fields.city.status);
+ assert.equal(prepareReview(r,'No daily flow confirmed').functions.length,4);
 });

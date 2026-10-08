@@ -1,7 +1,8 @@
+import { selectedEventCity } from '../shared/eventCity.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateRequirements, fieldNotice, hasHeadcountConflict } from '../shared/brief.ts';
-import { inventedBrief, inventedExtraction } from './fixtures/brief.ts';
+import { hometownBrief, inventedBrief, inventedExtraction } from './fixtures/brief.ts';
 test('keeps verbatim requirements, individual function headcounts and missing fields', () => {
   const result = validateRequirements(inventedExtraction(), inventedBrief);
   assert.equal(result.fields.city.value, 'Jaipur');
@@ -100,4 +101,20 @@ test('accepts room and night values with their units from the stated stay line',
     assert.equal(row.rule.value, raw.scalingRules[index].rule);
     assert.equal(row.rule.status, 'provided');
   });
+});
+
+
+test('event city box accepts only validated event cities unless the planner types a city', () => {
+ const named=validateRequirements(inventedExtraction(),inventedBrief).fields.city;
+ assert.equal(selectedEventCity(named,null).value,'Jaipur');
+ assert.equal(selectedEventCity(named,'Mumbai').value,'Mumbai');
+ assert.equal(selectedEventCity(named,'Mumbai').status,'corrected');
+ assert.equal(selectedEventCity(named,'Mumbai').source,'');
+ assert.equal(selectedEventCity(named,'').value,'');
+ assert.equal(selectedEventCity(named,'  ').status,'missing');
+ const raw=inventedExtraction();raw.fields.city='Mumbai';
+ const protectedCity=validateRequirements(raw,hometownBrief).fields.city;
+ assert.equal(selectedEventCity(protectedCity,null).value,'');
+ assert.equal(selectedEventCity(protectedCity,'Mumbai').value,'Mumbai');
+ assert.equal(selectedEventCity(protectedCity,' Mumbai ').value,'Mumbai');
 });

@@ -89,3 +89,25 @@ test('real AI fills the detailed two-day brief with eight functions and four sca
   await page.getByLabel('City', { exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: '/tmp/detailed-brief-mobile.png' });
 });
+
+
+test('event city auto-fills from a named event city and planner input wins before and after reading', async ({ page }) => {
+ const { inventedExtraction } = await import('./fixtures/brief');
+ const { validateRequirements } = await import('../shared/brief');
+ const r=validateRequirements(inventedExtraction(),inventedBrief);
+ await page.route('**/api/action',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'success',value:r})}));
+ await page.goto('/');await page.getByLabel('Paste the brief').fill(inventedBrief);
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await expect(page.getByLabel('Event city',{exact:true})).toHaveValue('Jaipur');
+ await expect(page.getByLabel('City',{exact:true})).toHaveValue('Jaipur');
+ await page.getByLabel('Event city',{exact:true}).fill('Mumbai');
+ await expect(page.getByLabel('City',{exact:true})).toHaveValue('Mumbai');
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await expect(page.getByLabel('City',{exact:true})).toHaveValue('Mumbai');
+ await page.getByLabel('Event city',{exact:true}).fill('');
+ await expect(page.getByLabel('City',{exact:true})).toHaveValue('');
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await expect(page.getByLabel('City',{exact:true})).toHaveValue('');
+ await page.getByLabel('City',{exact:true}).fill('Pune');
+ await expect(page.getByLabel('Event city',{exact:true})).toHaveValue('Pune');
+});

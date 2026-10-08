@@ -138,6 +138,27 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
   for (const h of heads) h.amount = h.lines.some(l=>l.amount!==null) ? money(h.lines.reduce((sum,l)=>sum+(l.amount??0),0)) : null;
   return { heads, toQuote: heads.flatMap(h => h.lines).filter(l => l.amount === null), total: money(heads.flatMap(h => h.lines).reduce((sum, l) => sum + (l.amount ?? 0), 0)) };
 }
-export function rawProposal(proposal: Proposal): string {
-  return [...proposal.heads.flatMap(h => [`${h.name} — ${h.amount === null ? 'To quote' : rupees(h.amount)} · headcount ${h.headcount ?? 'per function / not set'}`, ...h.lines.map(l => `${l.label} — ${l.amount === null ? 'To quote' : rupees(l.amount)}${l.source ? ` — ${l.source}` : ''}${l.headcount ? ` · ${l.headcount} guests` : ''}${l.source?.startsWith('Client brief') ? ` · ${l.calculation}` : ''}`,)]), `Pre-GST total (priced lines only): ${rupees(proposal.total)}`, `To quote: ${proposal.toQuote.length} lines excluded from total.`].join('\n');
+export type RangedProposal = Proposal & { variancePercentage: number; varianceSource: string };
+export function variancePercentage(text: string): number | null {
+  const match = /^(?:±|\+\/-|plus\s*(?:or|\/)?\s*minus)?\s*(\d+(?:\.\d+)?)\s*%(?:\s+[^\d%]*)?$/i.exec(text.trim());
+  const percentage = match ? Number(match[1]) : NaN;
+  return Number.isFinite(percentage) && percentage >= 0 && percentage <= 100 ? percentage : null;
+}
+export function costRange(midpoint: number, percentage: number): { low: number; high: number } {
+  if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) throw new Error('Choose a variance from 0% to 100%.');
+  return { low: money(midpoint * (1 - percentage / 100)), high: money(midpoint * (1 + percentage / 100)) };
+}
+export function applyVariance(proposal: Proposal, percentage: number, source: string): RangedProposal {
+  costRange(proposal.total, percentage);
+  return { ...proposal, variancePercentage: percentage, varianceSource: source };
+}
+export function rangeFigure(midpoint: number | null, percentage: number): string {
+  if (midpoint === null) return 'To quote';
+  const range = costRange(midpoint, percentage);
+  return `${rupees(range.low)}–${rupees(range.high)} · midpoint ${rupees(midpoint)}`;
+}
+export function rawProposal(proposal: Proposal | RangedProposal): string {
+  const ranged = 'variancePercentage' in proposal;
+  const figure = (amount: number | null) => ranged ? rangeFigure(amount, proposal.variancePercentage) : amount === null ? 'To quote' : rupees(amount);
+  return [...(ranged ? [`Range: ±${proposal.variancePercentage}% around each midpoint — ${proposal.varianceSource}`] : []), ...proposal.heads.flatMap(h => [`${h.name} — ${figure(h.amount)} · headcount ${h.headcount ?? 'per function / not set'}`, ...h.lines.map(l => `${l.label} — ${figure(l.amount)}${l.source ? ` — ${l.source}` : ''}${l.headcount ? ` · ${l.headcount} guests` : ''}${l.source?.startsWith('Client brief') ? ` · ${l.calculation}` : ''}`,)]), `Pre-GST total (priced lines only): ${figure(proposal.total)}`, `To quote: ${proposal.toQuote.length} lines excluded from total.`].join('\n');
 }
