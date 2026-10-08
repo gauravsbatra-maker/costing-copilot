@@ -5,6 +5,7 @@ import { validateRequirements } from '../shared/brief.ts';
 import { detailedBrief, detailedExtraction } from './fixtures/brief.ts';
 import { prepareReview, suggestedHeadChoices } from '../shared/reviewChoices.ts';
 import { proposalChecks } from '../shared/proposalChecks.ts';
+import { applyContingencies, contingencyDefaults, contingencyReason } from '../shared/contingency.ts';
 import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
@@ -234,4 +235,42 @@ test('transfers require their own past guest count, use out-of-town guests, and 
  assert(!reviewed.missing.some(s=>s.includes('Guests the past transfers covered')));
  assert(reviewed.summary.some(s=>s.includes('past transfers covered 60 guests')));
  assert(!reviewed.summary.some(s=>s.startsWith('Scale per-person sheet costs against')&&s.includes(transfer.name)));
+});
+
+test('head contingencies default to 10% only for transfers and add reserves to both range ends without changing source prices', () => {
+ const r=requirements();r.fields.seasonalPremium={value:'+10% across all heads',status:'corrected',source:'+10% across all heads',reason:''};
+ const transfer={...head,row:20,name:'Guests Transfer (Toyota Crysta)',cost:12000,items:[]};
+ const b={...budget,heads:[head,transfer,{...head,row:21,name:'Decor',items:[]}]};
+ const drivers={'Taj Hotel Expenses':'Dinner: 1000',Decor:'Dinner: 1000'};
+ const bases={'Taj Hotel Expenses':'headcount',Decor:'headcount'} as const;
+ const p=applyVariance(buildProposal(b,r,drivers,bases,{},true,60),10,'Client brief · ±10%');
+ const original=structuredClone(p);
+ const defaults=contingencyDefaults(b);
+ assert.deepEqual(defaults,{'Taj Hotel Expenses':0,'Guests Transfer (Toyota Crysta)':10,Decor:0});
+ const c=applyContingencies(p,defaults,transfer.name);
+ assert.deepEqual(c.heads[transfer.name].range,{low:16335,high:19965,midpoint:18150});
+ assert.deepEqual(c.heads[transfer.name].reserve,{low:1485,high:1815,midpoint:1650});
+ assert.deepEqual(c.total,{low:costRange(p.total,10).low+1485,high:costRange(p.total,10).high+1815,midpoint:p.total+1650});
+ for(const h of p.heads.filter(h=>h.name!==transfer.name))assert.deepEqual(c.heads[h.name].range,{...costRange(h.amount!,10),midpoint:h.amount});
+ const zero=applyContingencies(p,Object.fromEntries(p.heads.map(h=>[h.name,0])),transfer.name);
+ assert.deepEqual(zero.total,{...costRange(p.total,10),midpoint:p.total});
+ const edited=applyContingencies(p,{...defaults,Decor:5},transfer.name);
+ assert.equal(edited.heads.Decor.range!.low,Math.round(costRange(p.heads[2].amount!,10).low*1.05*100)/100);
+ assert.deepEqual(p,original);
+ const choices=Object.fromEntries(Object.entries(defaults).map(([name,percentage])=>[name,{percentage,reason:contingencyReason(name===transfer.name,percentage)}]));
+ const checks=proposalChecks(b,r,p,drivers,bases,{}, {},60,choices);
+ assert(checks.summary.some(s=>s.startsWith('Contingency 10%: transfer count and vehicle needs often change close to the date')&&s.includes(transfer.name)));
+ assert(checks.assumptions.some(s=>s.startsWith(`${transfer.name} — Contingency 10%:`)));
+ for(const percentage of [-1,101,NaN,Infinity])assert.throws(()=>applyContingencies(p,{[transfer.name]:percentage},transfer.name));
+});
+
+test('contingencies round each reserve to cents, preserve zero-contingency totals and never price To quote heads', () => {
+ const p=applyVariance({heads:[{name:'Decor',headcount:null,amount:100.01,lines:[]},{name:'Guests Transfer',headcount:75,amount:null,lines:[]}],toQuote:[],total:100.01},2.5,'Project head choice');
+ const result=applyContingencies(p,{Decor:10,'Guests Transfer':10},'Guests Transfer');
+ assert.deepEqual(result.heads.Decor.range,{low:107.26,high:112.76,midpoint:110.01});
+ assert.deepEqual(result.heads.Decor.reserve,{low:9.75,high:10.25,midpoint:10});
+ assert.deepEqual(result.total,result.heads.Decor.range);
+ assert.equal(result.heads['Guests Transfer'].range,null);assert.equal(result.heads['Guests Transfer'].reserve,null);
+ const zero=applyContingencies(p,{Decor:0,'Guests Transfer':10},'Guests Transfer');
+ assert.deepEqual(zero.total,{low:97.51,high:102.51,midpoint:100.01});
 });

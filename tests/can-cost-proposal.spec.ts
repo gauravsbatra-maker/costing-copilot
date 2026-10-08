@@ -23,6 +23,7 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  await expect(page.getByRole('region',{name:'Costed proposal',exact:true})).toContainText('midpoint');
  await expect(page.getByText('Raw proposal output',{exact:true})).toHaveCount(0);
  const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ for(const head of heads)await expect(proposal.getByLabel(`Contingency % for ${head}`,{exact:true})).toHaveValue(head==='Guests Transfer (Toyota Crysta)'?'10':'0');
  const checks=proposal.getByRole('region',{name:'Check before you send',exact:true});
  await expect(checks).toBeVisible();
  expect(await checks.getByRole('heading',{level:4}).allTextContents()).toEqual(['Missing information','Uncertain costs','Assumptions and choices']);
@@ -41,7 +42,15 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  await page.getByLabel('Guests the past transfers covered',{exact:true}).fill('60');
  await expect(proposal).toHaveCount(0);
  await cost.click();
+ await expect(proposal.getByRole('heading',{name:'Guests Transfer (Toyota Crysta) · ₹1,237.5–₹1,512.5 · midpoint ₹1,375',exact:true})).toBeVisible();
+ await expect(checks.getByText(/^Contingency 10%: transfer count and vehicle needs often change close to the date/)).toBeVisible();
+ const contingency=proposal.getByLabel('Contingency % for Guests Transfer (Toyota Crysta)',{exact:true});
+ await contingency.fill('101');
+ await expect(proposal.locator('.proposal-total')).toHaveText('Enter a valid contingency for every head to show the pre-GST total.');
+ await expect(checks.getByText(/^Guests Transfer \(Toyota Crysta\) — Contingency %: missing or invalid/)).toBeVisible();
+ await contingency.fill('0');
  await expect(proposal.getByRole('heading',{name:'Guests Transfer (Toyota Crysta) · ₹1,125–₹1,375 · midpoint ₹1,250',exact:true})).toBeVisible();
+ await contingency.fill('10');
  await expect(checks.getByText(/^Guests Transfer \(Toyota Crysta\) — Guests the past transfers covered:/)).toHaveCount(0);
  await page.getByLabel('Guests the past transfers covered',{exact:true}).fill('');
  await expect(proposal).toHaveCount(0);

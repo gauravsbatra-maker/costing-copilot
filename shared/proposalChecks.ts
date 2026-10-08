@@ -2,11 +2,12 @@ import { fieldLabels, type BriefField, type FieldKey, type Requirements } from '
 import type { Budget } from './costing.ts';
 import { mapHead, mappedHeads, mealKind, numberIn, ruleForHead, type Basis, type RangedProposal } from './proposal.ts';
 import { suggestedHeadChoices } from './reviewChoices.ts';
+import type { ContingencyChoice } from './contingency.ts';
 
 export type ProposalChecks = { assumptions: string[]; summary: string[]; missing: string[]; uncertain: string[] };
 
 // Explain the existing result only. Never calculate or change a price here.
-export function proposalChecks(budget: Budget, requirements: Requirements, proposal: RangedProposal, drivers: Record<string, string>, bases: Record<string, Basis>, editedBases: Record<string, Basis> = {}, overrides: Record<number, number | null> = {}, pastTransferGuests: number | null = null): ProposalChecks {
+export function proposalChecks(budget: Budget, requirements: Requirements, proposal: RangedProposal, drivers: Record<string, string>, bases: Record<string, Basis>, editedBases: Record<string, Basis> = {}, overrides: Record<number, number | null> = {}, pastTransferGuests: number | null = null, contingencies: Record<string, ContingencyChoice> = {}): ProposalChecks {
   const checks: ProposalChecks = { assumptions: [], summary: [], missing: [], uncertain: [] };
   const food = mapHead('Food', budget)?.name ?? 'Unmatched requirements (food)';
   const transfers = mapHead('Transfers', budget)?.name ?? 'Unmatched requirements (transfers)';
@@ -91,6 +92,21 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
   checks.assumptions.push(`All priced cost heads — The range is ${proposal.variancePercentage}% below and above each existing cost. ${proposal.varianceSource}. This percentage is not a vendor quote.`);
   checks.assumptions.push('All cost heads — Figures are before GST; tax is not included. Historical sheet costs are used as a reference, not current vendor quotes.');
   checks.summary = assumptionSummary(budget, requirements, proposal, drivers, bases, overrides, pastTransferGuests);
+  const groupedContingencies = new Map<string, string[]>();
+  for (const head of proposal.heads) {
+    const choice = contingencies[head.name];
+    if (!choice) continue;
+    if (choice.percentage === null || !Number.isFinite(choice.percentage) || choice.percentage < 0 || choice.percentage > 100) {
+      checks.missing.push(`${head.name} — Contingency %: missing or invalid. Enter 0% to 100% before using the total.`);
+      continue;
+    }
+    const description = `Contingency ${choice.percentage}%: ${choice.reason}`;
+    const note = head.amount === null ? ' No reserve is added while this head is To quote.' : choice.percentage === 0 ? ' No reserve is added to this head.' : ' This reserve increases both ends of this head’s range and is included in the total.';
+    checks.assumptions.push(`${head.name} — ${description}.${note}`);
+    const rule = description + (head.amount === null ? ' (not added until priced)' : choice.percentage === 0 ? '' : ' (included in both ends of the range)');
+    groupedContingencies.set(rule, [...(groupedContingencies.get(rule) ?? []), head.name]);
+  }
+  for (const [rule, heads] of groupedContingencies) checks.summary.push(`${rule}: ${heads.join(', ')}.`);
   return checks;
 }
 

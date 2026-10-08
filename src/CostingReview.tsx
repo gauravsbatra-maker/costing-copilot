@@ -1,3 +1,4 @@
+import { applyContingencies, contingencyDefaults, contingencyFigure, contingencyReason, type ContingencyChoice } from '../shared/contingency';
 import { suggestedHeadChoices } from '../shared/reviewChoices';
 import { proposalChecks } from '../shared/proposalChecks';
 import { useState } from 'react';
@@ -5,6 +6,7 @@ import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
 import { applyVariance, parsePastTransferGuests, variancePercentage, rangeFigure, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
 export default function CostingReview({ budget, requirements, drivers, setDrivers }: { budget: Budget; requirements: Requirements; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void }) {
+  const [contingencyEntries, setContingencyEntries] = useState<Record<string,string>>({});
   const [pastTransferGuestsEntry, setPastTransferGuestsEntry] = useState('');
   const pastTransferGuests = parsePastTransferGuests(pastTransferGuestsEntry);
   const [bases, setBases] = useState<Record<string,Basis>>({});
@@ -23,7 +25,14 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const selectedBases = Object.fromEntries(budget.heads.map(h=>[h.name,bases[h.name] ?? suggestions[h.name].basis]));
   const signature = JSON.stringify({budget,requirements,drivers,bases:selectedBases,overrides,useBriefRooms,percentage,varianceSource,pastTransferGuestsEntry});
   const proposal = generated?.signature === signature ? generated.proposal : null;
-  const checks = proposal ? proposalChecks(budget, requirements, proposal, drivers, selectedBases, bases, overrides, pastTransferGuests) : null;
+  const contingencyDefaultsByHead = contingencyDefaults(budget);
+  const contingencyChoices: Record<string, ContingencyChoice> = Object.fromEntries((proposal?.heads ?? []).map(h => {
+    const percentage = variancePercentage(`${contingencyEntries[h.name] ?? contingencyDefaultsByHead[h.name] ?? 0}%`);
+    return [h.name, {percentage, reason:contingencyReason(contingencyDefaultsByHead[h.name] === 10, percentage ?? 0)}];
+  }));
+  const contingenciesValid = Object.values(contingencyChoices).every(c=>c.percentage!==null);
+  const contingent = proposal && contingenciesValid ? applyContingencies(proposal,Object.fromEntries(Object.entries(contingencyChoices).map(([h,c])=>[h,c.percentage!])),mapHead('Transfers',budget)?.name) : null;
+  const checks = proposal ? proposalChecks(budget, requirements, proposal, drivers, selectedBases, bases, overrides, pastTransferGuests, contingencyChoices) : null;
   const functions = requirements.functions.filter(f => mealKind(f.name.value) !== 'tea');
   const counts = new Set(functions.map(f => numberIn(f.guests.value)).filter(n=>n!==null));
   const conflict = counts.size > 1 || functions.some(f=>numberIn(f.guests.value)===null);
@@ -68,14 +77,17 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full Overall WIP costing to cost this.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
     {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
-      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{h.name} · {rangeFigure(h.amount,proposal.variancePercentage)}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=><div className="proposal-line" key={i}>{(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${l.label} · `}{rangeFigure(l.amount,proposal.variancePercentage)}</strong>}{l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{l.calculation}</small>{l.source&&l.original&&<details><summary>{l.source}</summary><p>{l.original?.name} · original pre-GST: {typeof l.original?.cost==='number'?rupees(l.original.cost):'To quote'}{l.original&&'quantity' in l.original?` · sheet quantity: ${l.original.quantity}`:''}</p></details>}{l.source&&!l.original&&<small>{l.source}</small>}</div>)}</div>)}
+      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{h.name} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=><div className="proposal-line" key={i}>{(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${l.label} · `}{rangeFigure(l.amount,proposal.variancePercentage)}</strong>}{l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{l.calculation}</small>{l.source&&l.original&&<details><summary>{l.source}</summary><p>{l.original?.name} · original pre-GST: {typeof l.original?.cost==='number'?rupees(l.original.cost):'To quote'}{l.original&&'quantity' in l.original?` · sheet quantity: ${l.original.quantity}`:''}</p></details>}{l.source&&!l.original&&<small>{l.source}</small>}</div>)}
+        <label className="brief-field"><span>Contingency %</span><input aria-label={`Contingency % for ${h.name}`} type="number" min="0" max="100" step="any" value={contingencyEntries[h.name] ?? contingencyDefaultsByHead[h.name] ?? 0} onChange={e=>setContingencyEntries(prev=>({...prev,[h.name]:e.target.value}))}/></label>
+        {contingencyChoices[h.name].percentage===null ? <p className="amber">Enter a contingency from 0% to 100% for {h.name}.</p> : <p className="contingency-line">Contingency {contingencyChoices[h.name].percentage}%: {contingencyChoices[h.name].reason}{contingent && contingencyChoices[h.name].percentage! > 0 ? contingent.heads[h.name].reserve ? ` · ${contingencyFigure(contingent.heads[h.name].reserve)}` : ' · To quote; no reserve added until this head is priced.' : ''}</p>}
+      </div>)}
       {checks && <section aria-label="Check before you send"><h3>Check before you send</h3>
         <h4>Missing information</h4>{checks.missing.length ? <ul>{checks.missing.map((text,i)=><li key={i}>{text}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
         <h4>Uncertain costs</h4>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{text}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
         <h4>Assumptions and choices</h4><ul>{checks.summary.map((text,i)=><li key={i}>{text}</li>)}</ul>
         <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{text}</li>)}</ul></details>
       </section>}
-      <p className="proposal-total">Pre-GST total (priced lines only): {rangeFigure(proposal.total,proposal.variancePercentage)}</p>
+      <p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>
       <p>Not saved. This proposal is cleared when you close the app.</p>
     </section>}

@@ -20,7 +20,7 @@
 - Local browser verification is pending: the user’s local server is running on port 5173, but this restricted session denied Chrome launch. The saved browser check includes the missing-variance question and stale-range clearing.
 - Real Tara sheet calculations checked against the saved wedding-brief reading and previous reviewed choices; raw output and the no-edit Confirm all browser script are outside the repo in /private/tmp. This is not a fresh full-flow verification.
 - Await full local browser proof and user confirmation before commit, push or deploy.
-## Active milestone: 5 — flag assumptions, missing information and uncertain costs
+## Previous milestone: 5 — flag assumptions, missing information and uncertain costs
 - Add “Check before you send” above the pre-GST total, with plain-language entries naming the affected cost heads.
 - Explain displayed headcounts, cost bases, pre-filled fields and schedules, meal-row matching, season increases, brief-room pricing and range choices.
 - Show missing information and uncertain costs first; group assumptions by shared rule and affected heads, with all original details behind a “Show all assumptions” toggle that starts closed.
@@ -28,5 +28,11 @@
 - Add an empty “Guests the past transfers covered” field. Only transfers use sheet cost × out-of-town guests ÷ this past count, keeping existing seasonal and range percentages. Missing or invalid counts leave transfers To quote and appear in the checklist; transfers never use the historical event guest count as their divisor.
 - All 40 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original costing sheet, checked empty and filled transfer counts and clearing the field, and confirmed every other head and source unchanged at desktop and phone widths. Real inputs and captured output remain outside the repo.
 - User approved committing and pushing the proposal clean-up, checklist and transfer-count correction. Deployment was not requested.
+## Active milestone: 6 — explain and apply contingency
+- Add editable “Contingency %” inputs under each proposal head: 10% for Guests Transfer and 0% elsewhere.
+- Show each reserve and its reason separately under the affected head and in “Assumptions and choices”. Increase both ends of that head’s existing range; add rounded reserves to the original pre-GST total.
+- Keep source prices, source rows, line ranges, pre-fill, city inputs and the transfer past-guest field unchanged. To quote heads receive no priced reserve; invalid percentages flag missing information and hide the numeric total.
+- All 42 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original sheet with the past-transfer count filled, checked the new reserve and total at desktop and phone widths, and restored the previous figures by setting contingency to zero. Real inputs and captured output remain outside the repo.
+- User approved committing and pushing milestone 6 contingency changes. Deployment was not requested.
 ## Parked
 None.
