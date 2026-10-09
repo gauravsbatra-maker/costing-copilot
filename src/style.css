@@ -37,3 +37,11 @@ select:focus-visible, summary:focus-visible { outline: 2px solid #1e4fa3; outlin
   .proposal-review th:first-child { width: 100%; }
   .proposal-review td::before { content: attr(data-label); display: block; font-weight: 700; margin-bottom: 4px; }
 }
+
+.account-nav, .account-panel { max-width: 1044px; margin: 24px auto; padding: 0 28px; overflow-wrap: anywhere; }
+.account-nav { display:flex; gap:16px; flex-wrap:wrap; }
+.account-nav button { width:auto; }
+.account-panel form { max-width:420px; display:grid; gap:16px; margin:20px 0; }
+.account-panel input { width:100%; padding:10px; font:inherit; border:1px solid #66766c; border-radius:6px; background:white; color:#20332d; }
+.account-panel li { margin:20px 0; }
+@media(max-width:600px) { .account-nav,.account-panel { padding:0 16px; } }

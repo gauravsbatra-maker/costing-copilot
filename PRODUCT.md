@@ -48,4 +48,5 @@ Sequence: read, understand, map, price, explain uncertainty, correct, trust, sav
 8. I can review one consolidated view of scope, assumptions and costs. Deliverables and timelines stay out: the non-costing parts of the client proposal already cover them.
 9. I can reach a credible first-pass costing from the brief and costing sheet in under five minutes. **Passed.**
    Evidence: new brief plus Tara sheet, 3 min 49 sec end to end; tool midpoint ₹4,59,94,575 against my own estimate of ₹4.35–4.45 crore, about 4.5% apart and inside the ±10% line.
-10. I can create an account after seeing the first value, close the product, return later, and find my corrected costing saved exactly as I left it.
+10. I can create an account after seeing the first value, close the product, return later, and find my corrected costing saved exactly as I left it. **Done.**
+   Evidence: anonymous costing, Convex Auth email-and-password sign-up, private saving, and signing out and back in to reopen the exact edited costing passed Chrome tests. The wedding brief with the Tara sheet reopened at midpoint ₹8,46,76,850. Uploaded Excel files are not stored; parsed source rows remain traceable. All 46 code tests, 11 browser tests and the build passed.

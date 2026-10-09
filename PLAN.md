@@ -51,5 +51,11 @@
 - User reported a new brief plus the costing sheet took 3 min 49 sec end to end, with the tool midpoint about 4.5% from the project head’s estimate and inside the ±10% line. Full evidence is recorded in PRODUCT.md; no brief or sheet is stored in the repo.
 - Label-only corrections show “Food & beverage (minimum guarantee)” and “Guest rooms” in the costed and review views, preserving original source text and every number. All 45 code tests, 10 browser tests and the build passed; Chrome checked the unchanged amounts and phone width.
 - User approved committing and pushing the milestone 9 evidence together with the label changes. Deployment was not requested.
+## Completed milestone: 10 — save and reopen private costings
+- Keep anonymous costing available. Offer Convex Auth email and password only when saving or opening My costings; no email service.
+- Save the brief, reviewed requirements and headcounts, parsed source rows, original proposal, edits, contingencies and exact total privately to the signed-in owner. Never store uploaded workbook bytes.
+- Reopen the editable snapshot without an AI call or reading a workbook; test anonymous costing, sign-out/sign-in persistence and account isolation. No calculation or label changes.
+- All 46 code tests, 11 browser tests and the build passed. Chrome verified the real-input saved costing after sign-out/sign-in and the review page at phone width.
+- User marked milestone 10 done and authorized commit and push with data-file exclusions. Deployment was not requested.
 ## Parked
 None.

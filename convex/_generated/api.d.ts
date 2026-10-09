@@ -8,9 +8,12 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as brief from "../brief.js";
 import type * as briefLimit from "../briefLimit.js";
 import type * as briefValidators from "../briefValidators.js";
+import type * as costings from "../costings.js";
+import type * as http from "../http.js";
 
 import type {
   ApiFromModules,
@@ -19,9 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   brief: typeof brief;
   briefLimit: typeof briefLimit;
   briefValidators: typeof briefValidators;
+  costings: typeof costings;
+  http: typeof http;
 }>;
 
 /**

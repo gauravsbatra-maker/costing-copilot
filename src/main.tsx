@@ -1,7 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import { ConvexReactClient } from 'convex/react';
 import App from './App';
+import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import '@fontsource/nunito-sans/latin-400.css';
 import '@fontsource/nunito-sans/latin-600.css';
 import '@fontsource/nunito-sans/latin-700.css';
@@ -9,4 +10,4 @@ import '@fontsource/nunito-sans/latin-800.css';
 import './style.css';
 const url = import.meta.env.VITE_CONVEX_URL;
 if (!url) createRoot(document.getElementById('root')!).render(<p>The app connection is missing. Set VITE_CONVEX_URL and rebuild.</p>);
-else createRoot(document.getElementById('root')!).render(<ConvexProvider client={new ConvexReactClient(url)}><App /></ConvexProvider>);
+else createRoot(document.getElementById('root')!).render(<ConvexAuthProvider client={new ConvexReactClient(url)}><App /></ConvexAuthProvider>);

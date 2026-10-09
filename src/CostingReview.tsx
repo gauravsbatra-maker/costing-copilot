@@ -1,3 +1,5 @@
+import { useSaveCosting } from './SavedCostings';
+import type { SavedCosting } from '../shared/savedCosting';
 import { costLabel, costText } from '../shared/displayLabels';
 import ProposalReview from './ProposalReview';
 import { editProposal, applyLineContingencies, lineKey, inputNumber, type LineEdit } from '../shared/lineEdits';
@@ -8,18 +10,19 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
 import { applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
-export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief }: { budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
+export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief, initial }: { initial?: SavedCosting | null; budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
+  const saveCosting = useSaveCosting();
   const reviewButton = useRef<HTMLButtonElement>(null);
-  const [lineEdits, setLineEdits] = useState<Record<string,LineEdit>>({});
+  const [lineEdits, setLineEdits] = useState<Record<string,LineEdit>>(initial?.state.lineEdits ?? {});
   const changeLine = (key: string, field: keyof LineEdit, value: string) => setLineEdits(prev=>({...prev,[key]:{...prev[key],[field]:value}}));
-  const [pastTransferGuestsEntry, setPastTransferGuestsEntry] = useState('');
+  const [pastTransferGuestsEntry, setPastTransferGuestsEntry] = useState(initial?.state.pastTransferGuestsEntry ?? '');
   const pastTransferGuests = parsePastTransferGuests(pastTransferGuestsEntry);
-  const [bases, setBases] = useState<Record<string,Basis>>({});
-  const [overrides, setOverrides] = useState<Record<number, number | null>>({});
-  const [useBriefRooms, setUseBriefRooms] = useState(Boolean(requirements.fields.rooms.value));
-  const [confirmed, setConfirmed] = useState(false);
-  const [generated, setGenerated] = useState<{signature:string;proposal:RangedProposal} | null>(null);
-  const [chosenVariance, setChosenVariance] = useState('');
+  const [bases, setBases] = useState<Record<string,Basis>>(initial?.state.bases ?? {});
+  const [overrides, setOverrides] = useState<Record<number, number | null>>(initial?.state.overrides ?? {});
+  const [useBriefRooms, setUseBriefRooms] = useState(initial?.state.useBriefRooms ?? Boolean(requirements.fields.rooms.value));
+  const [confirmed, setConfirmed] = useState(initial?.state.confirmed ?? false);
+  const [generated, setGenerated] = useState<{signature:string;proposal:RangedProposal} | null>(initial?.state.generated ?? null);
+  const [chosenVariance, setChosenVariance] = useState(initial?.state.chosenVariance ?? '');
   const briefVariance = requirements.fields.variance;
   const statedVariance = (briefVariance.status === 'provided' || briefVariance.status === 'corrected') ? variancePercentage(briefVariance.value) : null;
   const percentage = statedVariance ?? variancePercentage(`${chosenVariance}%`);
@@ -32,7 +35,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const originalProposal = generated?.signature === signature ? generated.proposal : null;
   const proposal = originalProposal ? editProposal(originalProposal,lineEdits) : null;
   const generate = () => { if(percentage===null)return; setLineEdits({}); setGenerated({signature,proposal:applyVariance(buildProposal(budget,requirements,drivers,selectedBases,overrides,useBriefRooms,pastTransferGuests),percentage,varianceSource)}); };
-  const contingencyDefaultsByHead = contingencyDefaults(budget);
+  const contingencyDefaultsByHead = initial?.defaults ?? contingencyDefaults(budget);
   const contingencyChoices: Record<string, ContingencyChoice> = Object.fromEntries((proposal?.heads ?? []).map(h => {
     const percentage = variancePercentage(`${lineEdits[lineKey(h.name,0)]?.contingency ?? contingencyDefaultsByHead[h.name] ?? 0}%`);
     return [h.name, {percentage, reason:contingencyReason(contingencyDefaultsByHead[h.name] === 10, percentage ?? 0)}];
@@ -120,7 +123,8 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
       </section>}
       <p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>
-      <p>Not saved. This proposal is cleared when you close the app.</p>
+      <button className="read-brief" type="button" disabled={!contingent || !generated} onClick={()=>{if(contingent && generated)saveCosting({version:1,brief,budget,requirements,drivers,defaults:contingencyDefaultsByHead,contingencies:linePercentages as Record<string,number>,lines:proposal,priced:contingent,state:{lineEdits,pastTransferGuestsEntry,bases,overrides,useBriefRooms,confirmed,generated,chosenVariance},total:`Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}`});}}>Save this costing</button>
+      <p>Only saved costings are kept in your account. The uploaded Excel file is never stored.</p>
     </section>}
   </section>;
 }
