@@ -311,12 +311,13 @@ test('line edits preserve seasonal and room factors, source rows, other lines, a
 });
 
 
-test('proposal display labels remove the past hotel and name guest rooms without changing source references or other labels', () => {
+test('proposal display labels remove the past hotel and name guest rooms in every display context while retaining source data and other labels', () => {
  const old='Taj Hotel Expenses ( minimum gaurentee)';
  assert.equal(costLabel(old),'Food & beverage (minimum guarantee)');
  assert.equal(costLabel('Accommodation · rooms and nights'),'Guest rooms');
  for(const label of ['Other Costs','Decor','Guests Transfer (Toyota Crysta)','Day 1 · Lunch'])assert.equal(costLabel(label),label);
  const source=`Overall WIP · ${old} · row 5`;
- assert.equal(costText(source,[old]),source);
- assert.equal(costText(`${old} — meal row: ${source}`,[old]),`Food & beverage (minimum guarantee) — meal row: ${source}`);
+ assert.equal(costText(source,[old]),'Overall WIP · Food & beverage (minimum guarantee) · row 5');
+ assert.equal(source,`Overall WIP · ${old} · row 5`);
+ assert.equal(costText(`${old} — meal row: ${source}`,[old]),'Food & beverage (minimum guarantee) — meal row: Overall WIP · Food & beverage (minimum guarantee) · row 5');
 });

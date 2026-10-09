@@ -14,6 +14,8 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
 
+ await expect(page.getByLabel('Headcount driving Food & beverage (minimum guarantee)',{exact:true})).toBeVisible();
+ await expect(page.getByLabel(/Headcount driving Taj/)).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Sign in',exact:true})).toHaveCount(0);
  await page.getByLabel('Event city',{exact:true}).fill('Jaipur');
  await page.getByLabel('Guests the past transfers covered',{exact:true}).fill('60');
@@ -26,6 +28,9 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  const total=await proposal.locator('.proposal-total').innerText();
  const before=await proposal.locator('.proposal-head').allTextContents();
  await proposal.getByRole('button',{name:'Save this costing',exact:true}).click();
+ await expect(page.getByLabel('Email',{exact:true})).toBeFocused();
+ await expect(page.getByLabel('Email',{exact:true})).toBeInViewport();
+ await expect(page.getByRole('region',{name:'My costings',exact:true}).getByRole('heading',{name:'My costings',exact:true})).toBeInViewport();
  await page.getByRole('button',{name:'Create an account',exact:true}).click();
  const email=`costing-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
  const password='Invented-test-password-2026!';
@@ -46,6 +51,8 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await expect(page.getByLabel('Guests the past transfers covered',{exact:true})).toHaveValue('60');
  await expect(page.getByLabel('Event city',{exact:true})).toHaveValue('Jaipur');
  await expect(proposal.getByLabel('Contingency % for Guests Transfer (Toyota Crysta)',{exact:true})).toHaveValue('20');
+ await expect(page.getByLabel('Headcount driving Food & beverage (minimum guarantee)',{exact:true})).toBeVisible();
+ await expect(page.getByLabel(/Headcount driving Taj/)).toHaveCount(0);
  expect(reads).toBe(1);
  await page.getByRole('button',{name:'Sign out',exact:true}).click();
  await expect(proposal).toHaveCount(0);

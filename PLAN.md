@@ -57,5 +57,11 @@
 - Reopen the editable snapshot without an AI call or reading a workbook; test anonymous costing, sign-out/sign-in persistence and account isolation. No calculation or label changes.
 - All 46 code tests, 11 browser tests and the build passed. Chrome verified the real-input saved costing after sign-out/sign-in and the review page at phone width.
 - User marked milestone 10 done and authorized commit and push with data-file exclusions. Deployment was not requested.
+## Current follow-up — consistent labels and live Save diagnosis
+- Apply existing display names to headcount and cost-basis fields, source-reference displays, sheet readback, costed and review screens, and reopened saved costings. Preserve original sheet keys, source text and row numbers in data; change no prices.
+- Chrome confirmed the unchanged wedding costing after reopening; all 46 code tests, 11 browser tests and the build passed.
+- Live Save opens the sign-in panel above the current scroll position. A production sign-up attempt fails because JWT_PRIVATE_KEY is missing; JWKS is also not configured. Production sign-in and environment variables remain unchanged.
+- Save now scrolls the sign-in panel into view and focuses Email. The regression test failed before the fix and passes with it; Chrome also verified this at phone width with the unchanged real-input total. All 46 code tests, 11 browser tests and the build passed.
+- User authorized committing and pushing the label and scroll/focus fixes with data-file exclusions. No deployment requested.
 ## Parked
 None.

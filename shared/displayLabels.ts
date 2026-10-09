@@ -9,8 +9,8 @@ export function costText(text: string, headNames: string[]): string {
   let display = text;
   for (const name of [...headNames, 'Accommodation · rooms and nights'].sort((a,b)=>b.length-a.length)) {
     if (costLabel(name)===name) continue;
-    // Preserve source references even if they occur in an assumption sentence.
-    display = display.replaceAll(name, (match, offset: number) => display.slice(0,offset).endsWith('Overall WIP · ') ? match : costLabel(name));
+    // Display source names consistently; the stored source text and row stay intact.
+    display = display.replaceAll(name, costLabel(name));
   }
   return display;
 }

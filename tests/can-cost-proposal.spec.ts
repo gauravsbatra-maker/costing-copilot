@@ -1,3 +1,4 @@
+import {costLabel} from '../shared/displayLabels';
 import {test,expect} from '@playwright/test';
 import * as XLSX from 'xlsx';
 import {validateRequirements} from '../shared/brief';
@@ -87,9 +88,9 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  await expect(proposal.getByText('Overall WIP · Decor · row 11',{exact:true})).toHaveCount(1);
  await page.getByLabel('City',{exact:true}).fill('Jaipur');
  await page.getByLabel('Function 2 guest count',{exact:true}).fill('999');
- for(const h of heads)await page.getByLabel(`Choose a function for ${h}`,{exact:true}).selectOption('Dinner: 1000');
+ for(const h of heads)await page.getByLabel(`Choose a function for ${costLabel(h)}`,{exact:true}).selectOption('Dinner: 1000');
  await page.getByLabel('I confirm the requirements and matching rows.').check(); await expect(cost).toBeEnabled();await cost.click();
- const raw=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(raw).toContainText('Day 1 · High tea · ₹1,125–₹1,375 · midpoint ₹1,250');await expect(raw).toContainText('Overall WIP · Taj Hotel Expenses · row 4');await expect(raw).toContainText('Guest rooms · ₹25,20,000–₹30,80,000');await expect(raw).toContainText('Day 1 · After party · To quote');
+ const raw=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(raw).toContainText('Day 1 · High tea · ₹1,125–₹1,375 · midpoint ₹1,250');await expect(raw).toContainText('Overall WIP · Food & beverage (minimum guarantee) · row 4');await expect(raw).toContainText('Guest rooms · ₹25,20,000–₹30,80,000');await expect(raw).toContainText('Day 1 · After party · To quote');
  await page.getByLabel('Calculation for Decor',{exact:true}).selectOption('headcount'); await expect(raw).toHaveCount(0);await cost.click();await expect(raw).toBeVisible();
  await page.getByLabel('Use my reviewed brief’s rooms, room rate and nights. No further season increase on this quoted rate.').check(); await cost.click(); await expect(raw).toContainText('Client brief · rooms, room rate and nights · confirmed by project head');
  // Missing variance must ask instead of silently using the previous brief’s percentage.

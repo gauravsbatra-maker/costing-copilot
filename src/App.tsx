@@ -1,3 +1,4 @@
+import { costLabel } from '../shared/displayLabels';
 import { Fragment, useRef, useState, type ReactNode } from 'react';
 import SavedCostings from './SavedCostings';
 import type { SavedCosting } from '../shared/savedCosting';
@@ -35,8 +36,8 @@ export default function App() {
     {busy && <p role="status">Reading your workbook…</p>}
     {error && <p className="error" role="alert">{error}</p>}
     {budget && <section aria-label="Costing results"><div className="result-heading"><div><h2>{budget.sheet}</h2><p>{fileName} · Excel figures as supplied · Pre-GST only</p></div><span>Amounts in Rs</span></div><p className="hint">Click a cost head to see its line items. “could not read” means the sheet did not provide a readable value; nothing is estimated.</p><div className="table-wrap"><table><thead><tr><th scope="col">Cost head / line item</th><th scope="col">Cost (W/O GST)</th><th scope="col">NW</th><th scope="col">W</th></tr></thead><tbody>
-      {budget.unread.map(row => <tr key={row.row}><th scope="row">{row.name}</th><Values row={row}/></tr>)}
-      {budget.heads.map(head => <Fragment key={head.row}><tr className="head"><th scope="row"><button aria-expanded={expanded.has(head.row)} onClick={() => setExpanded(prev => { const next = new Set(prev); next.has(head.row) ? next.delete(head.row) : next.add(head.row); return next; })}><span aria-hidden="true">{expanded.has(head.row) ? '−' : '+'}</span>{head.name}<small>Row {head.row} · {head.items.length} line items</small></button></th><Values row={head}/></tr>{expanded.has(head.row) && (head.items.length ? head.items.map(item => <tr className="item" key={item.row}><th scope="row">{item.name}<small>Row {item.row}</small></th><Values row={item}/></tr>) : <tr><td colSpan={4}>No line items in this cost head.</td></tr>)}</Fragment>)}
+      {budget.unread.map(row => <tr key={row.row}><th scope="row">{costLabel(row.name)}</th><Values row={row}/></tr>)}
+      {budget.heads.map(head => <Fragment key={head.row}><tr className="head"><th scope="row"><button aria-expanded={expanded.has(head.row)} onClick={() => setExpanded(prev => { const next = new Set(prev); next.has(head.row) ? next.delete(head.row) : next.add(head.row); return next; })}><span aria-hidden="true">{expanded.has(head.row) ? '−' : '+'}</span>{costLabel(head.name)}<small>Row {head.row} · {head.items.length} line items</small></button></th><Values row={head}/></tr>{expanded.has(head.row) && (head.items.length ? head.items.map(item => <tr className="item" key={item.row}><th scope="row">{costLabel(item.name)}<small>Row {item.row}</small></th><Values row={item}/></tr>) : <tr><td colSpan={4}>No line items in this cost head.</td></tr>)}</Fragment>)}
     </tbody><tfoot><tr><th scope="row">Total{budget.total.row > 0 && <small>Sheet row {budget.total.row}</small>}</th><Values row={budget.total}/></tr></tfoot></table></div></section>}
   </main>{reviewPage}</SavedCostings>;
 }

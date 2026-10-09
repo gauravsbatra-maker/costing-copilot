@@ -1,3 +1,4 @@
+import { costLabel, costText } from '../shared/displayLabels';
 import type { SavedCosting } from '../shared/savedCosting';
 import { selectedEventCity } from '../shared/eventCity';
 import CostingReview from './CostingReview';
@@ -10,11 +11,11 @@ import { ConvexError } from 'convex/values';
 import { api } from '../convex/_generated/api';
 import { fieldLabels, fieldNotice, hasHeadcountConflict, missingField, type BriefField, type FieldKey, type Requirements } from '../shared/brief';
 
-function Editable({ label, field, onChange }: { label: string; field: BriefField; onChange: (field: BriefField) => void }) {
+function Editable({ label, field, onChange, headNames=[] }: { headNames?:string[]; label: string; field: BriefField; onChange: (field: BriefField) => void }) {
   const notice = fieldNotice(field);
-  return <label className={`brief-field ${notice ? 'needs-review' : ''}`}><span>{label}</span><input aria-label={label} value={field.value} placeholder={notice || label} onChange={e => onChange(e.target.value.trim() ? { ...field, value: e.target.value, status: 'corrected', reason: '' } : { ...missingField(), source: field.source })} />
+  return <label className={`brief-field ${notice ? 'needs-review' : ''}`}><span>{label}</span><input aria-label={label} value={costText(field.value,headNames)} placeholder={notice || label} onChange={e => onChange(e.target.value.trim() ? { ...field, value: e.target.value, status: 'corrected', reason: '' } : { ...missingField(), source: field.source })} />
     {notice && <small className="amber">{notice}</small>}
-    {field.source && <small>From brief: “{field.source}”</small>}
+    {field.source && <small>From brief: “{costText(field.source,headNames)}”</small>}
     {field.status === 'corrected' && <small>{field.reason ? `Pre-filled: ${field.reason}` : 'Your correction · kept only in this page'}</small>}
   </label>;
 }
@@ -55,12 +56,12 @@ export default function BriefReader({ costHeads, budget, onReview, saved }: { sa
       {result.functions.map((row, index) => <div className="function-grid" key={index}><Editable label={`Function ${index + 1} day / date`} field={row.day} onChange={field => editFunction(index, 'day', field)} /><Editable label={`Function ${index + 1} name`} field={row.name} onChange={field => editFunction(index, 'name', field)} /><Editable label={`Function ${index + 1} guest count`} field={row.guests} onChange={field => editFunction(index, 'guests', field)} /></div>)}
       <button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, functions: [...prev.functions, { day: missingField(), name: missingField(), guests: missingField() }] })}>Add a missing function</button>
       <h3>Scaling rule for each cost head</h3>{!result.scalingRules.length && !costHeads.length && <p className="amber">Missing: no cost heads or scaling rules were stated in the brief.</p>}
-      {result.scalingRules.map((row, index) => <div className="rule-grid" key={index}><Editable label={`Cost head ${index + 1}`} field={row.head} onChange={field => editRule(index, 'head', field)} /><Editable label={`Scaling rule ${index + 1}`} field={row.rule} onChange={field => editRule(index, 'rule', field)} /></div>)}
-      {rules.filter(row => row.index < 0).map(row => <div className="worksheet-rule" key={row.name}><strong>{row.name}</strong><p className="amber">Missing: no scaling rule for this Excel cost head was stated in the brief.</p><button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, scalingRules: [...prev.scalingRules, { head: { value: row.name, status: 'corrected', source: '', reason: '' }, rule: missingField() }] })}>Enter a rule for {row.name}</button></div>)}
+      {result.scalingRules.map((row, index) => <div className="rule-grid" key={index}><Editable headNames={heads} label={`Cost head ${index + 1}`} field={row.head} onChange={field => editRule(index, 'head', field)} /><Editable headNames={heads} label={`Scaling rule ${index + 1}`} field={row.rule} onChange={field => editRule(index, 'rule', field)} /></div>)}
+      {rules.filter(row => row.index < 0).map(row => <div className="worksheet-rule" key={row.name}><strong>{costLabel(row.name)}</strong><p className="amber">Missing: no scaling rule for this Excel cost head was stated in the brief.</p><button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, scalingRules: [...prev.scalingRules, { head: { value: row.name, status: 'corrected', source: '', reason: '' }, rule: missingField() }] })}>Enter a rule for {costLabel(row.name)}</button></div>)}
       <button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, scalingRules: [...prev.scalingRules, { head: missingField(), rule: missingField() }] })}>Add a missing cost head</button>
       {(hasHeadcountConflict(result) || new Set(result.functions.map(f => numberIn(f.guests.value)).filter(n => n !== null)).size > 1) && <div className="headcount-flag" role="alert"><h3>Headcounts differ</h3><p>Your rules are pre-filled below. Review the reasons and change any choice before confirming.</p>
         {!heads.length && <p>Add the cost heads stated in the brief or upload your Excel sheet to identify the heads that need a choice.</p>}
-        {heads.map(head => <label className="brief-field" key={head}><span>Headcount driving {head}</span><input aria-label={`Headcount driving ${head}`} value={drivers[head] ?? selectedDrivers[head] ?? ''} placeholder="Choose the function and headcount, or explain the basis" onChange={e => setDrivers(prev => ({ ...prev, [head]: e.target.value }))} /><small>{drivers[head] !== undefined ? 'Your edited choice replaces the suggested headcount.' : `Pre-filled. ${suggestions[head]?.reason ?? ''}`}</small>{!(drivers[head] ?? selectedDrivers[head])?.trim() && <small className="amber">Missing: which headcount should drive {head}?</small>}</label>)}
+        {heads.map(head => <label className="brief-field" key={head}><span>Headcount driving {costLabel(head)}</span><input aria-label={`Headcount driving ${costLabel(head)}`} value={drivers[head] ?? selectedDrivers[head] ?? ''} placeholder="Choose the function and headcount, or explain the basis" onChange={e => setDrivers(prev => ({ ...prev, [head]: e.target.value }))} /><small>{drivers[head] !== undefined ? 'Your edited choice replaces the suggested headcount.' : `Pre-filled. ${suggestions[head]?.reason ?? ''}`}</small>{!(drivers[head] ?? selectedDrivers[head])?.trim() && <small className="amber">Missing: which headcount should drive {costLabel(head)}?</small>}</label>)}
     </div>}
       {budget && <CostingReview initial={saved?.requirements===result ? saved : null} key={JSON.stringify(result)} budget={budget} requirements={result} brief={brief} drivers={selectedDrivers} setDrivers={setDrivers} onReview={onReview} />}
     </div>}
