@@ -1,12 +1,14 @@
+import ProposalReview from './ProposalReview';
 import { editProposal, applyLineContingencies, lineKey, inputNumber, type LineEdit } from '../shared/lineEdits';
 import { applyContingencies, contingencyDefaults, contingencyFigure, contingencyReason, type ContingencyChoice } from '../shared/contingency';
 import { suggestedHeadChoices } from '../shared/reviewChoices';
 import { proposalChecks } from '../shared/proposalChecks';
-import { useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
 import { applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
-export default function CostingReview({ budget, requirements, drivers, setDrivers }: { budget: Budget; requirements: Requirements; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void }) {
+export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief }: { budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
+  const reviewButton = useRef<HTMLButtonElement>(null);
   const [lineEdits, setLineEdits] = useState<Record<string,LineEdit>>({});
   const changeLine = (key: string, field: keyof LineEdit, value: string) => setLineEdits(prev=>({...prev,[key]:{...prev[key],[field]:value}}));
   const [pastTransferGuestsEntry, setPastTransferGuestsEntry] = useState('');
@@ -86,7 +88,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     {benchmarkNeeded&&<p className="amber">Enter the benchmark headcount to scale costs.</p>}
     {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full Overall WIP costing to cost this.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
-    {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
+    {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2><button className="add-detail" type="button" ref={reviewButton} onClick={()=>{if(checks && originalProposal) { onReview(<ProposalReview brief={brief} requirements={requirements} proposal={proposal} original={originalProposal} contingent={contingent} checks={checks} edits={lineEdits} percentages={linePercentages} defaults={contingencyDefaultsByHead} onBack={()=>{onReview(null);requestAnimationFrame(()=>reviewButton.current?.focus());}}/>); window.scrollTo(0,0); requestAnimationFrame(()=>document.querySelector<HTMLElement>('.proposal-review h1')?.focus()); }}}>Review proposal</button><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
       {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{h.name} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
         const key=lineKey(h.name,i), original=originalProposal!.heads.find(head=>head.name===h.name)!.lines[i];
         const edit=lineEdits[key];

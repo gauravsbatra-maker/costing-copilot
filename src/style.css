@@ -20,3 +20,20 @@ select:focus-visible, summary:focus-visible { outline: 2px solid #1e4fa3; outlin
 .line-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 .line-inputs .brief-field { min-width: 0; }
 @media (max-width: 600px) { .line-inputs { grid-template-columns: 1fr; gap: .5rem; } }
+
+.proposal-review { overflow-wrap: anywhere; }
+.proposal-review section { margin-top: 36px; }
+.proposal-review li { margin-bottom: 8px; line-height: 1.6; }
+.proposal-review table { margin-top: 20px; table-layout: fixed; }
+.proposal-review th, .proposal-review td { min-width: 0; width: auto; white-space: normal; text-align: left; vertical-align: top; }
+.proposal-review th:first-child { width: 22%; }
+.proposal-review th:nth-child(4) { width: 28%; }
+.review-source { display: block; margin-bottom: 8px; }
+@media (max-width: 600px) {
+  .proposal-review thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .proposal-review table, .proposal-review tbody, .proposal-review tr, .proposal-review th, .proposal-review td { display: block; width: 100%; }
+  .proposal-review tr { padding: 16px 0; border-bottom: 1px solid #d8e0d7; }
+  .proposal-review th, .proposal-review td { padding: 6px 0; border: 0; }
+  .proposal-review th:first-child { width: 100%; }
+  .proposal-review td::before { content: attr(data-label); display: block; font-weight: 700; margin-bottom: 4px; }
+}

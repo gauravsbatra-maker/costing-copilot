@@ -34,11 +34,18 @@
 - Keep source prices, source rows, line ranges, pre-fill, city inputs and the transfer past-guest field unchanged. To quote heads receive no priced reserve; invalid percentages flag missing information and hide the numeric total.
 - All 42 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original sheet with the past-transfer count filled, checked the new reserve and total at desktop and phone widths, and restored the previous figures by setting contingency to zero. Real inputs and captured output remain outside the repo.
 - User approved committing and pushing milestone 6 contingency changes. Deployment was not requested.
-## Active milestone: 7 — edit proposal lines in place
+## Previous milestone: 7 — edit proposal lines in place
 - Add editable quantity, unit cost and contingency to every proposal line, keeping the original calculation and source rows as the reset baseline.
 - Recalculate line prices, head ranges and the pre-GST total in browser code from the existing proposal; no additional AI call or file read. Mark edited lines and offer Reset to sheet for each line.
 - Preserve pre-filled review choices, city and past-transfer inputs, and the checklist layout. Keep individual contingency choices visible in its existing assumptions list.
 - All 43 code tests, all 8 browser tests and the build passed. Chrome verification used the saved reviewed brief and original sheet with the past-transfer count filled, changed transfer contingency to 20%, and restored the original 10% total through Reset at desktop and phone widths. Real inputs and captured output remain outside the repo.
 - User approved committing and pushing milestone 7 line-editing changes. Deployment was not requested.
+## Active milestone: 8 — review confirmed scope, assumptions and costs
+- Add Review proposal on the costed screen and a separate read-only page with Scope, Assumptions and Costs, ending with the existing pre-GST total.
+- Use the confirmed city, dates and function guest counts. Read the stated event type from the brief for the review page and combine it with the reviewed day count; ignore historical benchmark event types. Only a missing event type shows “Not stated in brief” and a review-page missing-information item. Existing review and costing screens stay unchanged.
+- Reuse the current checklist items and closed assumptions toggle. Show one cost row per head with its existing range, midpoint, actual source rows, per-line contingency percentages when different, and the same edited status.
+- Back to edit retains the existing screen and all inputs and edits. No calculation changes, AI calls, file reads, storage, export, deliverables or timelines added.
+- All 44 code tests, all 10 browser tests and the build passed, including stated and missing event types. Chrome verification on the saved reviewed wedding brief and original Tara sheet with 60 past-transfer guests confirmed the Event line, unchanged midpoint, identical existing checklist items, exact return-to-edit state, and no sideways scrolling at 390px. Real inputs and captured page text remain outside the repo.
+- User approved committing and pushing milestone 8 review-page changes. Deployment was not requested.
 ## Parked
 None.

@@ -3,7 +3,7 @@ import CostingReview from './CostingReview';
 import type { Budget } from '../shared/costing';
 import { prepareReview, suggestedHeadChoices } from '../shared/reviewChoices';
 import { numberIn } from '../shared/proposal';
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { ConvexHttpClient } from 'convex/browser';
 import { ConvexError } from 'convex/values';
 import { api } from '../convex/_generated/api';
@@ -17,7 +17,7 @@ function Editable({ label, field, onChange }: { label: string; field: BriefField
     {field.status === 'corrected' && <small>{field.reason ? `Pre-filled: ${field.reason}` : 'Your correction · kept only in this page'}</small>}
   </label>;
 }
-export default function BriefReader({ costHeads, budget }: { costHeads: string[]; budget: Budget | null }) {
+export default function BriefReader({ costHeads, budget, onReview }: { costHeads: string[]; budget: Budget | null; onReview: (page: ReactNode) => void }) {
   const [client] = useState(() => new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL));
   const [brief, setBrief] = useState('');
   const [cityEntry, setCityEntry] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function BriefReader({ costHeads, budget }: { costHeads: string[]
         {!heads.length && <p>Add the cost heads stated in the brief or upload your Excel sheet to identify the heads that need a choice.</p>}
         {heads.map(head => <label className="brief-field" key={head}><span>Headcount driving {head}</span><input aria-label={`Headcount driving ${head}`} value={drivers[head] ?? selectedDrivers[head] ?? ''} placeholder="Choose the function and headcount, or explain the basis" onChange={e => setDrivers(prev => ({ ...prev, [head]: e.target.value }))} /><small>{drivers[head] !== undefined ? 'Your edited choice replaces the suggested headcount.' : `Pre-filled. ${suggestions[head]?.reason ?? ''}`}</small>{!(drivers[head] ?? selectedDrivers[head])?.trim() && <small className="amber">Missing: which headcount should drive {head}?</small>}</label>)}
     </div>}
-      {budget && <CostingReview key={JSON.stringify(result)} budget={budget} requirements={result} drivers={selectedDrivers} setDrivers={setDrivers} />}
+      {budget && <CostingReview key={JSON.stringify(result)} budget={budget} requirements={result} brief={brief} drivers={selectedDrivers} setDrivers={setDrivers} onReview={onReview} />}
     </div>}
   </section>;
 }

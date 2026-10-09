@@ -1,3 +1,4 @@
+import { reviewEvent } from '../shared/reviewEvent.ts';
 import { selectedEventCity } from '../shared/eventCity.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -117,4 +118,20 @@ test('event city box accepts only validated event cities unless the planner type
  assert.equal(selectedEventCity(protectedCity,null).value,'');
  assert.equal(selectedEventCity(protectedCity,'Mumbai').value,'Mumbai');
  assert.equal(selectedEventCity(protectedCity,' Mumbai ').value,'Mumbai');
+});
+
+
+test('review event uses the current brief type and reviewed duration, and flags only a missing current event type', () => {
+ const days={value:'2',status:'provided' as const,source:'2 days',reason:''};
+ assert.deepEqual(reviewEvent('Wedding Budget Brief – invented client\nDates: December | 2 days',days),{type:'Wedding',label:'Wedding · 2 days'});
+ assert.equal(reviewEvent('Hi team – sharing the wedding brief 👇',days).label,'Wedding · 2 days');
+ assert.equal(reviewEvent('Event type: Annual dealer meet',days).label,'Annual dealer meet · 2 days');
+ assert.equal(reviewEvent('Barn raising brief',days).label,'Barn raising · 2 days');
+ assert.equal(reviewEvent('Birthday brief',{...days,value:'1 day'}).label,'Birthday · 1 day');
+ assert.equal(reviewEvent('Wedding brief',{...days,value:'3',status:'corrected'}).label,'Wedding · 3 days');
+ assert.equal(reviewEvent('Wedding brief',{...days,value:'',status:'missing'}).label,'Wedding');
+ assert.equal(reviewEvent('Wedding brief',{...days,value:'2',status:'unclear'}).label,'Wedding');
+ assert.equal(reviewEvent('Wedding anniversary brief',days).type,'Wedding anniversary');
+ for(const brief of ['', 'Lunch for 250 guests. Dinner for 1,000 guests.', 'Use our Aug 2026 Mumbai wedding as the benchmark project.', 'Event type: Not stated', 'No wedding. Dates: December.']) assert.deepEqual(reviewEvent(brief,days),{type:null,label:'Not stated in brief'});
+ assert.equal(reviewEvent('Use the previous wedding as benchmark. Birthday brief for the current event.',days).type,'Birthday');
 });
