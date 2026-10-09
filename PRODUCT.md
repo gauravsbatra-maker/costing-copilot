@@ -46,5 +46,6 @@ Sequence: read, understand, map, price, explain uncertainty, correct, trust, sav
 6. I can see an appropriate contingency applied where required and understand why it has been added.
 7. I can change a quantity, assumption, cost or contingency and immediately see the revised project cost range.
 8. I can review one consolidated view of scope, assumptions and costs. Deliverables and timelines stay out: the non-costing parts of the client proposal already cover them.
-9. I can reach a credible first-pass costing from the brief and costing sheet in under five minutes.
+9. I can reach a credible first-pass costing from the brief and costing sheet in under five minutes. **Passed.**
+   Evidence: new brief plus Tara sheet, 3 min 49 sec end to end; tool midpoint ₹4,59,94,575 against my own estimate of ₹4.35–4.45 crore, about 4.5% apart and inside the ±10% line.
 10. I can create an account after seeing the first value, close the product, return later, and find my corrected costing saved exactly as I left it.

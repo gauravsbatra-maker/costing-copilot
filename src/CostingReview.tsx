@@ -1,3 +1,4 @@
+import { costLabel, costText } from '../shared/displayLabels';
 import ProposalReview from './ProposalReview';
 import { editProposal, applyLineContingencies, lineKey, inputNumber, type LineEdit } from '../shared/lineEdits';
 import { applyContingencies, contingencyDefaults, contingencyFigure, contingencyReason, type ContingencyChoice } from '../shared/contingency';
@@ -89,16 +90,16 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full Overall WIP costing to cost this.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
     {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2><button className="add-detail" type="button" ref={reviewButton} onClick={()=>{if(checks && originalProposal) { onReview(<ProposalReview brief={brief} requirements={requirements} proposal={proposal} original={originalProposal} contingent={contingent} checks={checks} edits={lineEdits} percentages={linePercentages} defaults={contingencyDefaultsByHead} onBack={()=>{onReview(null);requestAnimationFrame(()=>reviewButton.current?.focus());}}/>); window.scrollTo(0,0); requestAnimationFrame(()=>document.querySelector<HTMLElement>('.proposal-review h1')?.focus()); }}}>Review proposal</button><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
-      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{h.name} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
+      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{costLabel(h.name)} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3><p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
         const key=lineKey(h.name,i), original=originalProposal!.heads.find(head=>head.name===h.name)!.lines[i];
         const edit=lineEdits[key];
         const pct=linePercentages[key];
         const defaultPct=contingencyDefaultsByHead[h.name]??0;
         const changed=l.amount!==original.amount || (edit?.contingency!==undefined && pct!==defaultPct) || (edit?.quantity!==undefined && inputNumber(edit.quantity)!==(original.pricing?.quantity??null)) || (edit?.unitCost!==undefined && inputNumber(edit.unitCost)!==(original.pricing?.unitCost??null));
-        const name=i===0?h.name:`${h.name} · ${l.label}`;
+        const name=i===0?costLabel(h.name):`${costLabel(h.name)} · ${costLabel(l.label)}`;
         const reserve=l.amount!==null && pct!==null ? applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].reserve : null;
         return <div className="proposal-line" key={i}>
-          {(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${l.label} · `}{l.amount!==null && pct!==null ? contingencyFigure(applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].range) : 'To quote'}</strong>}
+          {(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${costLabel(l.label)} · `}{l.amount!==null && pct!==null ? contingencyFigure(applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].range) : 'To quote'}</strong>}
           {l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{l.calculation}</small>
           {l.source&&l.original&&<details><summary>{l.source}</summary><p>{l.original.name} · original pre-GST: {typeof l.original.cost==='number'?rupees(l.original.cost):'To quote'}{'quantity' in l.original?` · sheet quantity: ${l.original.quantity}`:''}</p></details>}{l.source&&!l.original&&<small>{l.source}</small>}
           <div className="line-inputs">
@@ -108,14 +109,14 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
           </div>
           {changed&&<small>Edited by you, was {original.amount===null?'To quote':rupees(Math.round((original.amount*(1+defaultPct/100)+Number.EPSILON)*100)/100)}</small>}
           <button className="add-detail" type="button" onClick={()=>setLineEdits(prev=>{const next={...prev};delete next[key];return next;})}>Reset to sheet</button>
-          {pct===null ? <p className="amber">Enter a contingency from 0% to 100% for {h.name}.</p> : <p className="contingency-line">Contingency {pct}%: {contingencyReason(defaultPct===10,pct)}{pct>0 ? reserve ? ` · ${contingencyFigure(reserve)}` : ' · To quote; no reserve added until this head is priced.' : ''}</p>}
+          {pct===null ? <p className="amber">Enter a contingency from 0% to 100% for {costLabel(h.name)}.</p> : <p className="contingency-line">Contingency {pct}%: {contingencyReason(defaultPct===10,pct)}{pct>0 ? reserve ? ` · ${contingencyFigure(reserve)}` : ' · To quote; no reserve added until this head is priced.' : ''}</p>}
         </div>;
       })}</div>)}
       {checks && <section aria-label="Check before you send"><h3>Check before you send</h3>
-        <h4>Missing information</h4>{checks.missing.length ? <ul>{checks.missing.map((text,i)=><li key={i}>{text}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
-        <h4>Uncertain costs</h4>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{text}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
-        <h4>Assumptions and choices</h4><ul>{checks.summary.map((text,i)=><li key={i}>{text}</li>)}</ul>
-        <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{text}</li>)}</ul></details>
+        <h4>Missing information</h4>{checks.missing.length ? <ul>{checks.missing.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
+        <h4>Uncertain costs</h4>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
+        <h4>Assumptions and choices</h4><ul>{checks.summary.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul>
+        <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul></details>
       </section>}
       <p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>

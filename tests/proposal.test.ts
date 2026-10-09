@@ -1,3 +1,4 @@
+import { costLabel, costText } from '../shared/displayLabels.ts';
 import { editProposal, applyLineContingencies, lineKey } from '../shared/lineEdits.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -307,4 +308,15 @@ test('line edits preserve seasonal and room factors, source rows, other lines, a
  const meal=original.heads[0].lines[1].amount!;
  assert.equal(mixed.total.midpoint,baseline.total.midpoint+Math.round(meal*.2*100)/100);
  assert.deepEqual(mixed.heads[transfer.name],baseline.heads[transfer.name]);
+});
+
+
+test('proposal display labels remove the past hotel and name guest rooms without changing source references or other labels', () => {
+ const old='Taj Hotel Expenses ( minimum gaurentee)';
+ assert.equal(costLabel(old),'Food & beverage (minimum guarantee)');
+ assert.equal(costLabel('Accommodation · rooms and nights'),'Guest rooms');
+ for(const label of ['Other Costs','Decor','Guests Transfer (Toyota Crysta)','Day 1 · Lunch'])assert.equal(costLabel(label),label);
+ const source=`Overall WIP · ${old} · row 5`;
+ assert.equal(costText(source,[old]),source);
+ assert.equal(costText(`${old} — meal row: ${source}`,[old]),`Food & beverage (minimum guarantee) — meal row: ${source}`);
 });
