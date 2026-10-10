@@ -1,3 +1,4 @@
+import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
 import { nightlyRooms, totalRoomNights, roomsFromBrief } from '../shared/roomNights.ts';
 import { costLabel, costText } from '../shared/displayLabels.ts';
 import { editProposal, applyLineContingencies, lineKey } from '../shared/lineEdits.ts';
@@ -348,4 +349,22 @@ test('per-night room counts price 70 room nights at the quoted rate, preserve ot
  assert.deepEqual(roomsFromBrief(r,'Night 1: 30 rooms, Night 2: 40 rooms').map(row=>row.value),['30','40']);
  assert.equal(totalRoomNights(roomsFromBrief(r,'30 rooms Night 1, 40 rooms Night 1')),null);
  assert.equal(totalRoomNights([...reviewed.roomNights!,{value:'',status:'missing',source:'',reason:''}]),null);
+});
+
+test('review merges brief food aliases and empty sheet duplicates without changing costing or source rules',()=>{
+ const r=requirements();
+ const before=buildProposal(budget,r,{}, {}, {},true,60);
+ const original=structuredClone(r);
+ const rows=scalingRuleReview(r,budget);
+ assert.equal(rows[0].label,'Food & beverage (minimum guarantee)');
+ assert(hasScalingRule(head.name,r,budget));
+ assert.deepEqual(r,original);
+ r.scalingRules.push({head:{value:head.name,status:'corrected',source:'',reason:''},rule:{value:'',status:'missing',source:'',reason:''}});
+ const duplicated=structuredClone(r);
+ assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage (minimum guarantee)').length,1);
+ assert.equal(scalingRuleReview(r,budget)[0].row.rule.value,original.scalingRules[0].rule.value);
+ assert.deepEqual(r,duplicated);
+ assert.deepEqual(buildProposal(budget,r,{}, {}, {},true,60),before);
+ r.scalingRules[r.scalingRules.length-1].head.value='Food & beverage (minimum guarantee)';
+ assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage (minimum guarantee)').length,1);
 });

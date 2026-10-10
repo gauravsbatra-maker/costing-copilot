@@ -73,5 +73,10 @@
 - Price confirmed accommodation as total room nights times the quoted room rate, preserving its existing variance, contingency, source reference and no further seasonal increase. Keep legacy saved stays readable without rewriting their snapshots.
 - Tests cover 30 plus 40 room nights at the quoted rate, single-count stays including prose, conflicting counts, blank added nights, zero counts, editing, adding nights and unchanged other costs. All 48 code tests, 12 browser tests and the build passed. Chrome verified the example at phone width and the unchanged existing wedding total after saving and reopening.
 - User approved committing and pushing the per-night rooms change with data-file exclusions. No deployment requested.
+## Current follow-up — merge scaling-rule display aliases
+- Review used exact sheet-name equality while pricing already mapped brief aliases and shared rules to sheet heads. Reuse that matching in the review display so Food & beverage keeps its existing brief rule and no extra missing-rule prompt is offered.
+- Fold empty or identical duplicate display rows into the existing rule, preserving original indices, source text, underlying requirements and every costing line and number. Keep conflicting non-empty rules visible.
+- Unit coverage verifies aliases, old empty duplicates, display-name duplicates and unchanged costing. Chrome verified the complete four-rule wedding list and unchanged pre-GST total. All 49 code tests, 12 browser tests and the build passed.
+- User approved committing and pushing the scaling-rule duplicate fix with data-file exclusions. No deployment requested.
 ## Parked
 None.

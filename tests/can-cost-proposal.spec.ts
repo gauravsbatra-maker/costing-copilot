@@ -15,6 +15,8 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
  await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+ await expect(page.getByLabel('Cost head 1',{exact:true})).toHaveValue('Food & beverage (minimum guarantee)');
+ await expect(page.getByRole('button',{name:'Enter a rule for Food & beverage (minimum guarantee)',exact:true})).toHaveCount(0);
  const cost=page.getByRole('button',{name:'Cost it',exact:true});await expect(cost).toBeDisabled();
  await expect(page.getByLabel('Headcount driving Guests Transfer (Toyota Crysta)',{exact:true})).toHaveValue('Out-of-town guests: 75');
  await expect(page.getByLabel('Headcount driving Technicals',{exact:true})).toHaveValue('Dinner: 1000');
