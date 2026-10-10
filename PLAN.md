@@ -91,5 +91,10 @@
 - Display the existing creation date and local time under each saved label, retaining newest-first order and older saves without a migration. Add Delete with an explicit confirmation before removing the selected saved record.
 - The server requires sign-in and checks the record owner. Code tests verify anonymous and other-user deletion are rejected and another saved record remains intact. Chrome tests verify cancel, confirm, persistence after reload and reopening the remaining costing.
 - All 50 code tests, 14 browser tests and the build passed; development Convex functions updated cleanly. User authorized commit and push with data-file exclusions. No production deployment requested.
+## Current follow-up — prevent duplicate saves
+- Disable Save this costing while a save is pending or running. For the same signed-in owner, an exact brief and total match saved within two minutes updates that record, including its snapshot and saved time, instead of creating another.
+- Use an optional saved timestamp and indexed recent-owner reads, retaining older snapshots and newest-first order. Convex transaction retries protect concurrent saves; distinct briefs, totals or owners remain separate.
+- All 51 code tests, 14 browser tests and the build passed. Chrome verified a double-click disables Save and leaves one entry. Tests cover concurrent updates, expiry, distinct totals and owner isolation. The existing detailed real-AI test timed out once and passed on the full rerun unchanged.
+- User authorized commit and push with data-file exclusions. Development backend checked; no production deployment requested.
 ## Parked
 None.

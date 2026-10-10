@@ -9,7 +9,19 @@ export const save = mutation({
     const owner = await getAuthUserId(ctx);
     if (!owner) throw new Error('Sign in to save this costing.');
     const saved = readSavedCosting(snapshot);
-    return await ctx.db.insert('costings', {owner, snapshot, total:saved.total, title: savedCostingLabel(snapshot, saved.requirements.fields.city.value || 'Saved costing')});
+    const now=Date.now(), cutoff=now-120000;
+    const data={owner,snapshot,total:saved.total,title:savedCostingLabel(snapshot,saved.requirements.fields.city.value || 'Saved costing'),savedAt:now};
+    // Read only this owner's recent saves; Convex retries concurrent saves together.
+    const recent=ctx.db.query('costings').withIndex('by_owner_savedAt',q=>q.eq('owner',owner).gte('savedAt',cutoff)).order('desc');
+    const legacy=ctx.db.query('costings').withIndex('by_owner',q=>q.eq('owner',owner).gte('_creationTime',cutoff)).order('desc');
+    for(const query of [recent,legacy]){
+      for await(const row of query){
+        if((row.savedAt ?? row._creationTime)<cutoff || row.total!==saved.total)continue;
+        let brief:unknown;try{brief=JSON.parse(row.snapshot).brief;}catch{continue;}
+        if(brief===saved.brief){await ctx.db.patch(row._id,data);return row._id;}
+      }
+    }
+    return await ctx.db.insert('costings',data);
   },
 });
 export const list = query({
@@ -17,8 +29,10 @@ export const list = query({
   handler: async ctx => {
     const owner = await getAuthUserId(ctx);
     if (!owner) return [];
-    const rows = await ctx.db.query('costings').withIndex('by_owner',q=>q.eq('owner',owner)).order('desc').take(100);
-    return rows.map(r=>({id:r._id,title:savedCostingLabel(r.snapshot,r.title),total:r.total,savedAt:r._creationTime}));
+    const dated=await ctx.db.query('costings').withIndex('by_owner_savedAt',q=>q.eq('owner',owner).gt('savedAt',undefined)).order('desc').take(100);
+    const legacy=await ctx.db.query('costings').withIndex('by_owner_savedAt',q=>q.eq('owner',owner).eq('savedAt',undefined)).order('desc').take(100);
+    const rows=[...dated,...legacy].sort((a,b)=>(b.savedAt??b._creationTime)-(a.savedAt??a._creationTime)).slice(0,100);
+    return rows.map(r=>({id:r._id,title:savedCostingLabel(r.snapshot,r.title),total:r.total,savedAt:r.savedAt??r._creationTime}));
   },
 });
 export const get = query({

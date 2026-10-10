@@ -3,7 +3,7 @@ import { useAuthActions } from '@convex-dev/auth/react';
 import { useConvex, useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import { readSavedCosting, type SavedCosting } from '../shared/savedCosting';
-const SaveContext=createContext<(saved:SavedCosting)=>void>(()=>{});
+const SaveContext=createContext<{saveCosting:(saved:SavedCosting)=>void;isSaving:boolean}>({saveCosting:()=>{},isSaving:false});
 export const useSaveCosting=()=>useContext(SaveContext);
 export default function SavedCostings({children,onOpen,onSignOut}:{children:ReactNode;onOpen:(saved:SavedCosting)=>void;onSignOut:()=>void}) {
  const {isAuthenticated,isLoading}=useConvexAuth();
@@ -26,7 +26,7 @@ export default function SavedCostings({children,onOpen,onSignOut}:{children:Reac
   saving.current=true; setBusy(true);
   void save({snapshot:pending}).then(()=>{setPending(null);setNotice('Costing saved.');setPanel(false);}).catch(()=>{setError('Could not save this costing. Try Save this costing again.');setPending(null);}).finally(()=>{saving.current=false;setBusy(false);});
  },[isAuthenticated,pending,save]);
- return <SaveContext.Provider value={saved=>{setError('');setNotice('');setPending(JSON.stringify(saved));if(!isAuthenticated){setPanel(true);setFocusRequest(n=>n+1);}}}>
+ return <SaveContext.Provider value={{isSaving:!!pending || saving.current,saveCosting:saved=>{if(pending || saving.current)return;setError('');setNotice('');setPending(JSON.stringify(saved));if(!isAuthenticated){setPanel(true);setFocusRequest(n=>n+1);}}}}>
  <nav className="account-nav" aria-label="Saved costings"><button className="add-detail" onClick={()=>{setPanel(!panel);setError('');}}>My costings</button>{isAuthenticated&&<button className="add-detail" disabled={busy} onClick={()=>{void signOut().then(()=>{setPending(null);setPanel(false);setNotice('');onSignOut();});}}>Sign out</button>}</nav>
  {error&&!panel&&<p className="account-panel error" role="alert">{error}</p>}
  {notice&&<p className="account-panel" role="status">{notice}</p>}

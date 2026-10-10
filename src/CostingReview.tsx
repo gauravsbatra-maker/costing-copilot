@@ -11,7 +11,7 @@ import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
 import { chosenHeadcount, applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
 export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief, initial }: { initial?: SavedCosting | null; budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
-  const saveCosting = useSaveCosting();
+  const {saveCosting,isSaving} = useSaveCosting();
   const reviewButton = useRef<HTMLButtonElement>(null);
   const [lineEdits, setLineEdits] = useState<Record<string,LineEdit>>(initial?.state.lineEdits ?? {});
   const changeLine = (key: string, field: keyof LineEdit, value: string) => setLineEdits(prev=>({...prev,[key]:{...prev[key],[field]:value}}));
@@ -124,7 +124,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
       </section>}
       <p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>
-      <button className="read-brief" type="button" disabled={!contingent || !generated} onClick={()=>{if(contingent && generated)saveCosting({version:1,brief,budget,requirements,drivers,defaults:contingencyDefaultsByHead,contingencies:linePercentages as Record<string,number>,lines:proposal,priced:contingent,state:{lineEdits,pastTransferGuestsEntry,bases,overrides,useBriefRooms,confirmed,generated,chosenVariance},total:`Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}`});}}>Save this costing</button>
+      <button className="read-brief" type="button" disabled={isSaving || !contingent || !generated} onClick={()=>{if(contingent && generated)saveCosting({version:1,brief,budget,requirements,drivers,defaults:contingencyDefaultsByHead,contingencies:linePercentages as Record<string,number>,lines:proposal,priced:contingent,state:{lineEdits,pastTransferGuestsEntry,bases,overrides,useBriefRooms,confirmed,generated,chosenVariance},total:`Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}`});}}>Save this costing</button>
       <p>Only saved costings are kept in your account. The uploaded Excel file is never stored.</p>
     </section>}
   </section>;

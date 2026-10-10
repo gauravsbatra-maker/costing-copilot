@@ -64,6 +64,14 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await expect(page.getByLabel('Headcount driving Food & beverage',{exact:true})).toBeVisible();
  await expect(page.getByLabel(/Headcount driving Taj/)).toHaveCount(0);
  expect(reads).toBe(1);
+ const saveButton=proposal.getByRole('button',{name:'Save this costing',exact:true});
+ await saveButton.evaluate(button=>{(button as HTMLButtonElement).click();(button as HTMLButtonElement).click();});
+ await expect(saveButton).toBeDisabled();
+ await expect(page.getByRole('status')).toHaveText('Costing saved.');
+ await expect(saveButton).toBeEnabled();
+ await page.getByRole('button',{name:'My costings',exact:true}).click();
+ await expect(panel.locator('li')).toHaveCount(1);
+ await panel.getByRole('button',{name:'Back to costing',exact:true}).click();
  await proposal.getByLabel('Unit cost for Decor',{exact:true}).fill('2000');
  const newerTotal=await proposal.locator('.proposal-total').innerText();
  await proposal.getByRole('button',{name:'Save this costing',exact:true}).click();
