@@ -70,3 +70,16 @@ table.cost-summary { display:table; width:100%; table-layout:fixed; margin:16px 
   table.cost-summary { font-size:11px; }
   .cost-summary th, .cost-summary td { padding:8px 3px; }
 }
+
+.total-with-status { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 24px; margin-top:20px; }
+.total-figures { flex:1 1 340px; min-width:0; }
+.total-figures .proposal-total { margin-top:0; }
+.pricing-status { flex:1 1 240px; font-size:14px; overflow-wrap:anywhere; }
+.pricing-status p { margin:0; font-weight:700; }
+.pricing-status ul { padding-left:20px; margin-top:6px; }
+.priced-status { color:#66766c; }
+.brief-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; border-bottom:1px solid #d8e0d7; }
+.brief-tabs button { width:auto; padding:10px 14px; font-size:14px; }
+.brief-tabs [aria-selected="true"] { border-bottom:3px solid #285d45; color:#285d45; }
+
+.brief-entry.form-entry { grid-template-columns: minmax(0,1fr); }

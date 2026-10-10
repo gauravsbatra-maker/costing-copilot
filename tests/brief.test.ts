@@ -1,3 +1,4 @@
+import {briefFromForm,emptyBriefForm,blankBriefForm} from '../shared/briefForm.ts';
 import { reviewEvent } from '../shared/reviewEvent.ts';
 import { selectedEventCity } from '../shared/eventCity.ts';
 import { test } from 'node:test';
@@ -134,4 +135,17 @@ test('review event uses the current brief type and reviewed duration, and flags 
  assert.equal(reviewEvent('Wedding anniversary brief',days).type,'Wedding anniversary');
  for(const brief of ['', 'Lunch for 250 guests. Dinner for 1,000 guests.', 'Use our Aug 2026 Mumbai wedding as the benchmark project.', 'Event type: Not stated', 'No wedding. Dates: December.']) assert.deepEqual(reviewEvent(brief,days),{type:null,label:'Not stated in brief'});
  assert.equal(reviewEvent('Use the previous wedding as benchmark. Birthday brief for the current event.',days).type,'Birthday');
+});
+
+test('brief form makes plain equivalent text without supplying missing information or invented numbers',()=>{
+ const draft=emptyBriefForm();assert.equal(briefFromForm(draft),'');
+ draft.eventType='Wedding';draft.dates='14–15 Feb · 2 days';draft.city='Jaipur';
+ draft.functions=[{day:'Day 1',name:'Dinner',guests:'1,000'},{day:'Day 2',name:'Lunch',guests:'250'}];
+ draft.services='40 rooms · 2 nights · ₹35,000/room night\nDecor: fixed setup';
+ const before=structuredClone(draft);
+ assert.equal(briefFromForm(draft),'Event type: Wedding\nDates: 14–15 Feb · 2 days\nCity: Jaipur\nDay 1 · Dinner · 1,000 guests\nDay 2 · Lunch · 250 guests\nServices mentioned:\n40 rooms · 2 nights · ₹35,000/room night\nDecor: fixed setup');
+ assert.deepEqual(draft,before);
+ assert(blankBriefForm.includes('Event type:'));
+ assert(blankBriefForm.split('\n').length<30);
+ assert(!blankBriefForm.includes('35,000'));
 });

@@ -106,5 +106,12 @@
 - Retain all four visible columns at phone width with wrapping head names. Preserve existing percentages, per-guest wording, saved data, calculations and totals; unquoted heads remain To quote.
 - All 54 code tests, 14 browser tests and the build passed. The two review tests initially matched rows in both tables; scoping the detailed-cost selector fixed them and both passed on rerun. Chrome verified the full wedding table, expected Total figures and phone columns on both screens.
 - User authorized commit and push with data-file exclusions. No deployment requested.
+## Current follow-up — excluded-cost status and brief entry form
+- Beside both pre-GST totals show an amber count and the head/name of each excluded line, or grey All lines priced. Use current priced lines so edits remain reflected; preserve all calculation rules and total displays.
+- Add Paste client brief and Fill brief form tabs. The form covers event type, dates, city, repeatable function day/name/guest counts and services/details already read today. Serialize entered text into the existing reader; keep the paste box and city priority unchanged, with the form's visible city taking priority in that tab.
+- Offer a blank one-page text form for planners without including entered client data. Preserve costing and saved-brief behavior, using the submitted text in review and snapshots.
+- All 55 code tests, 15 browser tests and the build passed; the final form-city adjustment also passed the targeted browser check. Tests verify identical submitted text and costs across both entry methods, blank download and both pricing-status states on both screens. Initial new-test issues with request decoding and visible whitespace were corrected.
+- Chrome verified the wedding form with a fresh AI read against the existing reviewed pasted costing and original sheet: unchanged midpoint, same excluded lines and no phone overflow. Real inputs remain outside the repo.
+- User authorized commit and push with data-file exclusions. No deployment requested.
 ## Parked
 None.
