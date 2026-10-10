@@ -11,7 +11,7 @@ test('read a made-up WhatsApp brief through Convex and OpenAI, flag missing fiel
   await expect(page.getByRole('heading', { name: 'Review the requirements' })).toBeVisible();
   await expect(page.getByLabel('City', { exact: true })).toHaveValue('Jaipur');
   await expect(page.getByLabel('Number of days', { exact: true })).toHaveValue('2');
-  await expect(page.getByLabel('Rooms', { exact: true })).toHaveValue('40');
+  await expect(page.getByLabel('Room count – Night 1', { exact: true })).toHaveValue('40');
   await expect(page.getByLabel('Function 1 guest count', { exact: true })).toHaveValue('150');
   await expect(page.getByLabel('Function 2 guest count', { exact: true })).toHaveValue('250');
   await expect(page.getByLabel('Seasonal premium', { exact: true })).toHaveValue('');
@@ -19,8 +19,8 @@ test('read a made-up WhatsApp brief through Convex and OpenAI, flag missing fiel
   await expect(page.getByRole('heading', { name: 'Headcounts differ' })).toBeVisible();
   await expect(page.getByLabel('Headcount driving Food')).toHaveValue('');
   await page.getByLabel('Headcount driving Food').fill('Welcome dinner: 150');
-  await page.getByLabel('Rooms', { exact: true }).fill('45');
-  await expect(page.getByLabel('Rooms', { exact: true })).toHaveValue('45');
+  await page.getByLabel('Room count – Night 1', { exact: true }).fill('45');
+  await expect(page.getByLabel('Room count – Night 1', { exact: true })).toHaveValue('45');
   await page.getByLabel('Seasonal premium', { exact: true }).fill('No premium confirmed by project head');
   await expect(page.getByLabel('Seasonal premium', { exact: true })).toHaveValue('No premium confirmed by project head');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -41,7 +41,7 @@ test('real AI keeps the event city amber when Mumbai describes guests and the be
   await expect(page.getByLabel('City', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('City', { exact: true })).toHaveAttribute('placeholder', "Unclear: brief says client's hometown");
   await expect(page.getByText("Unclear: brief says client's hometown", { exact: true })).toBeVisible();
-  for (const label of ['Dates', 'Number of days', 'Out-of-town guests', 'Rooms', 'Nights', 'Room rate', 'Seasonal premium', 'GST treatment', 'Variance']) {
+  for (const label of ['Dates', 'Number of days', 'Out-of-town guests', 'Room count – Night 1', 'Room rate', 'Seasonal premium', 'GST treatment', 'Variance']) {
     const value = await page.getByLabel(label, { exact: true }).inputValue();
     if (value) expect(hometownBrief.includes(value), `${label} must quote the brief word for word`).toBe(true);
   }
@@ -64,8 +64,8 @@ test('real AI fills the detailed two-day brief with eight functions and four sca
   await expect(page.getByLabel('Dates', { exact: true })).toHaveValue('Last week of Dec 2026');
   await expect(page.getByLabel('Number of days', { exact: true })).toHaveValue(/^2(?: days)?$/);
   await expect(page.getByLabel('Out-of-town guests', { exact: true })).toHaveValue(/^75(?: guests)?$/);
-  await expect(page.getByLabel('Rooms', { exact: true })).toHaveValue(/^40(?: rooms)?$/);
-  await expect(page.getByLabel('Nights', { exact: true })).toHaveValue(/^2(?: nights)?$/);
+  await expect(page.getByLabel('Room count – Night 1', { exact: true })).toHaveValue(/^40(?: rooms)?$/);
+  await expect(page.getByLabel('Room count – Night 2', { exact: true })).toHaveValue('40');
   await expect(page.getByLabel('Room rate', { exact: true })).toHaveValue('₹35,000/room night');
   await expect(page.getByLabel('Benchmark project', { exact: true })).toHaveValue(/Aug 2026 Mumbai wedding/);
   await expect(page.getByLabel('Benchmark headcount', { exact: true })).toHaveValue(/^~700(?: pax)?$/);

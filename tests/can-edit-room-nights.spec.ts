@@ -1,0 +1,45 @@
+import {test,expect} from '@playwright/test';
+import * as XLSX from 'xlsx';
+import {validateRequirements} from '../shared/brief';
+import {detailedBrief,detailedExtraction} from './fixtures/brief';
+test('nightly rooms prefill, sum, edit and add a night, and price from total room nights',async({page})=>{
+ const brief=detailedBrief.replace('• Stay – 40 rooms | 2 nights | ₹35,000/room night','Hotel Four Seasons, ₹40,000/room night – 30 rooms Night 1, 40 rooms Night 2').replace('• Accommodation – use 40 rooms for 2 nights at ₹35,000/room night.','• Accommodation – use the rooms per night at the quoted room rate.');
+ const raw=detailedExtraction();
+ const r=validateRequirements({...raw,fields:{...raw.fields,rooms:null,nights:null,roomRate:'₹40,000/room night'},scalingRules:raw.scalingRules.map(row=>row.head==='Accommodation'?{...row,rule:'use the rooms per night at the quoted room rate'}:row)},brief);
+ let reads=0;
+ await page.route('**/api/action',route=>{if(route.request().postDataJSON().path!=='brief:structure')return route.continue();reads++;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'success',value:r})});});
+ const heads=['Taj Hotel Expenses','Bar Tenders','Guests Transfer (Toyota Crysta)','Entertainment','Technicals','Decor','Licenses & Permissions','Graphic Design & Printables','Photo / Video','Other Costs'];
+ const rows:unknown[][]=[['Sr No','Description','Qty','Days','Total','Rate','Cost'],[null,null,null,null,null,null,'W/0 GST','NW','W']];
+ heads.forEach((name,i)=>{rows.push([i+1,name,null,null,null,null,1000,0,1000]);if(i===0)rows.push([null,'Oct 24 - Lunch',100,1,100,8,800,0,800],[null,'Oct 24 - Sangeet',100,1,100,2,200,0,200],[null,'Oct 25 - High Tea',100,1,100,5,500,0,500]);});
+ rows.push([null,'Total',null,null,null,null,10000,0,10000]);
+ const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
+ await page.goto('/'); await page.getByLabel('Paste the brief').fill(brief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+
+
+ await expect(page.getByLabel('Rooms',{exact:true})).toHaveCount(0);
+ await expect(page.getByLabel('Nights',{exact:true})).toHaveCount(0);
+ await expect(page.getByLabel('Room count – Night 1',{exact:true})).toHaveValue('30');
+ await expect(page.getByLabel('Room count – Night 2',{exact:true})).toHaveValue('40');
+ const nights=page.getByRole('region',{name:'Room nights',exact:true});
+ await expect(nights.getByText('Total room nights: 70',{exact:true})).toBeVisible();
+ await page.getByLabel('Event city',{exact:true}).fill('Jaipur');
+ await page.getByLabel('Guests the past transfers covered',{exact:true}).fill('60');
+ await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ await expect(proposal.getByText('Guest rooms · ₹25,20,000–₹30,80,000 · midpoint ₹28,00,000',{exact:true})).toBeVisible();
+ await expect(proposal.getByText('70 room nights × ₹40,000 per room night; quoted room rate, no further season increase',{exact:true})).toBeVisible();
+ await page.getByLabel('Room count – Night 1',{exact:true}).fill('35');
+ await expect(nights.getByText('Total room nights: 75',{exact:true})).toBeVisible();
+ await expect(proposal).toHaveCount(0);
+ await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ await expect(proposal).toContainText('midpoint ₹30,00,000');
+ await page.getByRole('button',{name:'Add night',exact:true}).click();
+ await expect(page.getByLabel('Room count – Night 3',{exact:true})).toHaveValue('');
+ await expect(nights).toContainText('Enter a valid room count for every night');
+ await page.getByLabel('Room count – Night 3',{exact:true}).fill('10');
+ await expect(nights.getByText('Total room nights: 85',{exact:true})).toBeVisible();
+ await page.setViewportSize({width:390,height:844});
+ expect(await nights.evaluate(el=>el.getBoundingClientRect().right<=innerWidth)).toBe(true);
+ expect(reads).toBe(1);
+});

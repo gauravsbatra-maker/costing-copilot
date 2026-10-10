@@ -1,3 +1,4 @@
+import { nightlyRooms, totalRoomNights } from '../shared/roomNights';
 import { costLabel, costText } from '../shared/displayLabels';
 import type { SavedCosting } from '../shared/savedCosting';
 import { selectedEventCity } from '../shared/eventCity';
@@ -51,7 +52,10 @@ export default function BriefReader({ costHeads, budget, onReview, saved }: { sa
     {error && <p className="error" role="alert">{error}</p>}
     {result && <div className="requirements"><h2>Review the requirements</h2><p>Every filled value quotes your brief. Amber fields need your input. Changes stay on this page.</p>
       {!result.fields.city.value.trim() && <p className="amber">Enter the event city in the City field below before costing.</p>}
-      <div className="brief-grid">{(Object.keys(fieldLabels) as FieldKey[]).map(key => <Editable key={key} label={fieldLabels[key]} field={result.fields[key]} onChange={field => editField(key, field)} />)}</div>
+      <div className="brief-grid">{(Object.keys(fieldLabels) as FieldKey[]).filter(key=>key!=='rooms' && key!=='nights').map(key => <Editable key={key} label={fieldLabels[key]} field={result.fields[key]} onChange={field => editField(key, field)} />)}</div>
+      <section aria-label="Room nights"><h3>Rooms per night</h3>{nightlyRooms(result).map((field,index)=><Editable key={index} label={`Room count – Night ${index+1}`} field={field} onChange={next=>setResult(prev=>prev && {...prev,roomNights:nightlyRooms(prev).map((row,i)=>i===index?next:row)})}/>)}
+      <button className="add-detail" type="button" onClick={()=>setResult(prev=>prev && {...prev,roomNights:[...nightlyRooms(prev),missingField()]})}>Add night</button>
+      <p>Total room nights: {totalRoomNights(nightlyRooms(result)) ?? 'Enter a valid room count for every night'}</p></section>
       <h3>Functions per day</h3>{!result.functions.length && <p className="amber">Missing: no functions were stated in the brief.</p>}
       {result.functions.map((row, index) => <div className="function-grid" key={index}><Editable label={`Function ${index + 1} day / date`} field={row.day} onChange={field => editFunction(index, 'day', field)} /><Editable label={`Function ${index + 1} name`} field={row.name} onChange={field => editFunction(index, 'name', field)} /><Editable label={`Function ${index + 1} guest count`} field={row.guests} onChange={field => editFunction(index, 'guests', field)} /></div>)}
       <button className="add-detail" type="button" onClick={() => setResult(prev => prev && { ...prev, functions: [...prev.functions, { day: missingField(), name: missingField(), guests: missingField() }] })}>Add a missing function</button>

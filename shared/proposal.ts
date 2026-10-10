@@ -1,3 +1,4 @@
+import { totalRoomNights } from './roomNights.ts';
 import * as XLSX from 'xlsx';
 import { readCosting, type Budget, type CostHead, type CostRow } from './costing.ts';
 import type { Requirements } from './brief.ts';
@@ -131,16 +132,17 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
   });
   const extras = requirements.scalingRules.filter(r => !mappedHeads(r.head.value, budget).length).map(r => quote(r.head.value || 'Unnamed requirement', 'No matching sheet row.'));
   extras.push(...requirements.functions.filter(f => /high\s*tea.*ceremon/i.test(f.name.value)).map(f => quote(`${f.day.value} · Small ceremonies`, 'No matching sheet row for the small ceremonies.')));
-  if (requirements.fields.rooms.value) {
+  if (requirements.fields.rooms.value || requirements.roomNights?.length) {
     const label = 'Accommodation · rooms and nights';
     const rooms = numberIn(requirements.fields.rooms.value), nights = numberIn(requirements.fields.nights.value);
     const rateText = /(?:₹|Rs\.?|INR)\s*(\d[\d,]*(?:\.\d+)?)/i.exec(requirements.fields.roomRate.value)?.[1] ?? requirements.fields.roomRate.value;
     const rate = numberIn(rateText);
-    const amount = rooms && nights && rate ? money(rooms * nights * rate) : null;
+    const roomNights = requirements.roomNights ? totalRoomNights(requirements.roomNights) : rooms && nights ? rooms*nights : null;
+    const amount = roomNights !== null && (requirements.roomNights ? rate !== null : Boolean(rate)) ? money(roomNights * rate!) : null;
     if (useBriefRooms && amount !== null && Number.isSafeInteger(Math.round(amount * 100))) {
       // The project head explicitly authorizes this exception to sheet-only pricing.
       for (let i=extras.length-1;i>=0;i--) if (/accommodation|rooms|hotel stay/i.test(extras[i].label)) extras.splice(i,1);
-      extras.push({label, amount, source:'Client brief · rooms, room rate and nights · confirmed by project head',headcount:null,pricing:{quantity:rooms!,unitCost:rate!,multiplier:nights!},calculation:`${rooms} rooms × ${rupees(rate!)} per room night × ${nights} nights; quoted room rate, no further season increase`});
+      extras.push({label, amount, source:'Client brief · rooms, room rate and nights · confirmed by project head',headcount:null,pricing:requirements.roomNights ? {quantity:roomNights!,unitCost:rate!,multiplier:1} : {quantity:rooms!,unitCost:rate!,multiplier:nights!},calculation:requirements.roomNights ? `${roomNights} room nights × ${rupees(rate!)} per room night; quoted room rate, no further season increase` : `${rooms} rooms × ${rupees(rate!)} per room night × ${nights} nights; quoted room rate, no further season increase`});
     } else if (!extras.some(l=>/accommodation|rooms|hotel stay/i.test(l.label))) extras.push(quote(label, 'No accommodation row in the uploaded sheet.'));
   }
   if (!food) extras.push(...requirements.functions.map(f => quote(`${f.day.value} · ${f.name.value}`, 'No matching food head in the uploaded sheet.')));

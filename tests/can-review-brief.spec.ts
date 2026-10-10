@@ -25,8 +25,8 @@ test('review a simulated brief reply, correct amber fields and preserve the Exce
   await expect(page.getByRole('heading', { name: 'Headcounts differ' })).toBeVisible();
   await expect(page.getByLabel('Headcount driving Food')).toHaveValue('');
   await page.getByLabel('Headcount driving Food').fill('Welcome dinner: 150');
-  await page.getByLabel('Rooms', { exact: true }).fill('45');
-  await expect(page.getByLabel('Rooms', { exact: true })).toHaveValue('45');
+  await page.getByLabel('Room count – Night 1', { exact: true }).fill('45');
+  await expect(page.getByLabel('Room count – Night 1', { exact: true })).toHaveValue('45');
   await page.getByLabel('Seasonal premium', { exact: true }).fill('No premium');
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([
@@ -38,7 +38,7 @@ test('review a simulated brief reply, correct amber fields and preserve the Exce
   await expect(page.getByRole('row').filter({ hasText: 'Meal' })).toContainText('1,000');
   expect(sent).toHaveLength(1);
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByLabel('Rooms', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Room count – Night 1', { exact: true })).toBeVisible();
   await page.getByRole('heading', { name: 'Review the requirements' }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: '/tmp/brief-reader-mobile.png' });
   await page.getByRole('heading', { name: 'Headcounts differ' }).scrollIntoViewIfNeeded();

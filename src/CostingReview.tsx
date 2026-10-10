@@ -19,7 +19,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const pastTransferGuests = parsePastTransferGuests(pastTransferGuestsEntry);
   const [bases, setBases] = useState<Record<string,Basis>>(initial?.state.bases ?? {});
   const [overrides, setOverrides] = useState<Record<number, number | null>>(initial?.state.overrides ?? {});
-  const [useBriefRooms, setUseBriefRooms] = useState(initial?.state.useBriefRooms ?? Boolean(requirements.fields.rooms.value));
+  const [useBriefRooms, setUseBriefRooms] = useState(initial?.state.useBriefRooms ?? Boolean(requirements.fields.rooms.value || requirements.roomNights?.some(row=>row.value)));
   const [confirmed, setConfirmed] = useState(initial?.state.confirmed ?? false);
   const [generated, setGenerated] = useState<{signature:string;proposal:RangedProposal} | null>(initial?.state.generated ?? null);
   const [chosenVariance, setChosenVariance] = useState(initial?.state.chosenVariance ?? '');
@@ -53,7 +53,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const counts = new Set(functions.map(f => numberIn(f.guests.value)).filter(n=>n!==null));
   const conflict = counts.size > 1 || functions.some(f=>numberIn(f.guests.value)===null);
   const cityRequired = !requirements.fields.city.value.trim() || requirements.fields.city.status==='unclear';
-  const uncertain = [...Object.entries(requirements.fields).filter(([key])=>key!=='city').map(([,field])=>field), ...requirements.functions.flatMap(f=>Object.values(f)), ...requirements.scalingRules.flatMap(r=>Object.values(r))].filter(f=>f.status==='unclear').length;
+  const uncertain = [...Object.entries(requirements.fields).filter(([key])=>key!=='city' && (!requirements.roomNights || (key!=='rooms' && key!=='nights'))).map(([,field])=>field), ...(requirements.roomNights ?? []), ...requirements.functions.flatMap(f=>Object.values(f)), ...requirements.scalingRules.flatMap(r=>Object.values(r))].filter(f=>f.status==='unclear').length;
   const needed = conflict ? budget.heads.filter(h=>numberIn(drivers[h.name]??'')===null).length : 0;
   const food = mapHead('Food',budget);
   const transfers = mapHead('Transfers',budget);
@@ -79,12 +79,12 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     <h3>Requirement mapping</h3>
     {requirements.scalingRules.map((r,i)=>{const heads=mappedHeads(r.head.value,budget);return <p key={i}>{costLabel(r.head.value)||'Unnamed requirement'} → {heads.length?heads.map(h=>`Overall WIP · ${costLabel(h.name)} · row ${h.row}`).join('; '):'To quote — no matching sheet row'}</p>;})}
     <p>City, dates and guest details provide context. Accommodation uses a sheet row unless you explicitly confirm the brief’s room rate.</p>
-    {requirements.fields.rooms.value && <label className="confirmation"><input type="checkbox" checked={useBriefRooms} onChange={e=>setUseBriefRooms(e.target.checked)}/>Use my reviewed brief’s rooms, room rate and nights. No further season increase on this quoted rate.</label>}
+    {(requirements.fields.rooms.value || requirements.roomNights?.some(row=>row.value)) && <label className="confirmation"><input type="checkbox" checked={useBriefRooms} onChange={e=>setUseBriefRooms(e.target.checked)}/>Use my reviewed brief’s rooms, room rate and nights. No further season increase on this quoted rate.</label>}
     <h3>Cost range</h3>
     {statedVariance !== null ? <p>Use ±{statedVariance}% around each midpoint. {varianceSource}</p> : <label className="brief-field"><span>{briefVariance.value ? 'The brief’s variance needs a clear percentage. Which percentage should we use?' : 'The brief states no variance. Which percentage should we use?'}</span><input aria-label="Variance percentage to use" type="number" min="0" max="100" step="any" value={chosenVariance} onChange={e=>setChosenVariance(e.target.value)} placeholder="Enter a percentage, such as 10"/><small>Choose 0% to 100%. No percentage is assumed.</small></label>}
     <p>Low and high use the same percentage below and above the current figure. Season increases already included in the midpoint stay separate.</p>
     {cityRequired&&<p className="amber">Enter the event city in the City field before costing.</p>}
-    <p>Confirm all accepts the displayed requirements, headcounts, cost bases and matching rows{requirements.fields.rooms.value ? ', including the displayed brief-room pricing' : ''}. You can still edit every choice.</p>
+    <p>Confirm all accepts the displayed requirements, headcounts, cost bases and matching rows{(requirements.fields.rooms.value || requirements.roomNights?.some(row=>row.value)) ? ', including the displayed brief-room pricing' : ''}. You can still edit every choice.</p>
     <button className="add-detail" type="button" disabled={cityRequired||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={()=>{if(percentage!==null){setConfirmed(true);generate();}}}>Confirm all</button>
     <label className="confirmation"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I confirm the requirements and matching rows.</label>
     <button className="read-brief" type="button" disabled={cityRequired||!confirmed||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={generate}>Cost it</button>

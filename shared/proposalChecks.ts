@@ -1,3 +1,4 @@
+import { roomCount } from './roomNights.ts';
 import { fieldLabels, type BriefField, type FieldKey, type Requirements } from './brief.ts';
 import type { Budget } from './costing.ts';
 import { mapHead, mappedHeads, mealKind, numberIn, ruleForHead, type Basis, type RangedProposal } from './proposal.ts';
@@ -30,6 +31,7 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
     }
   };
   for (const key of Object.keys(fieldLabels) as FieldKey[]) {
+    if(requirements.roomNights && (key==='rooms'||key==='nights'))continue;
     const field = requirements.fields[key];
     missing(affectedField(key), fieldLabels[key], field);
     // A placeholder entered by the planner is still not a named event city.
@@ -37,6 +39,10 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
       checks.missing.push('All cost heads — City: the event city is still unconfirmed. Enter the named event city before sending.');
     }
     if (field.status === 'corrected' && field.reason) checks.assumptions.push(`${affectedField(key)} — Pre-filled ${fieldLabels[key].toLowerCase()}: ${field.value}. ${field.reason}`);
+  }
+  for(const [i,row] of (requirements.roomNights ?? []).entries()) {
+    missing(accommodation,`Room count – Night ${i+1}`,row);
+    if(row.value && roomCount(row.value)===null)checks.missing.push(`${accommodation} — Room count – Night ${i+1}: enter a non-negative whole room count.`);
   }
   for (const [index, f] of requirements.functions.entries()) {
     const label = [f.day.value, f.name.value].filter(Boolean).join(' · ') || `Function ${index + 1}`;

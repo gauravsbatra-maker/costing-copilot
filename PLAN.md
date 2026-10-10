@@ -68,5 +68,10 @@
 - My costings displays event type, saved brief dates and city, using city alone when event type or dates are missing. Derive labels for older snapshots without changing their stored content; unreadable legacy snapshots retain their existing title.
 - All 47 code tests, 11 browser tests and the build passed. Chrome checked both account modes at phone width and a new saved costing label; list tests cover older snapshots and city-only fallbacks.
 - User authorized committing and pushing with the usual data-file exclusions. No deployment requested.
+## Current follow-up — room counts per night
+- Replace the separate Rooms and Nights inputs with editable nightly rows, Add night and a read-only total of room nights. Read explicit nightly counts from the brief in code; repeat a single reviewed room count across its stated stay length.
+- Price confirmed accommodation as total room nights times the quoted room rate, preserving its existing variance, contingency, source reference and no further seasonal increase. Keep legacy saved stays readable without rewriting their snapshots.
+- Tests cover 30 plus 40 room nights at the quoted rate, single-count stays including prose, conflicting counts, blank added nights, zero counts, editing, adding nights and unchanged other costs. All 48 code tests, 12 browser tests and the build passed. Chrome verified the example at phone width and the unchanged existing wedding total after saving and reopening.
+- User approved committing and pushing the per-night rooms change with data-file exclusions. No deployment requested.
 ## Parked
 None.

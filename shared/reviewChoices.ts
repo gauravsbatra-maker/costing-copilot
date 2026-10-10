@@ -1,3 +1,4 @@
+import { roomsFromBrief } from './roomNights.ts';
 import type { BriefField, Requirements } from './brief.ts';
 import type { Budget } from './costing.ts';
 import { defaultBasis, mapHead, mealKind, numberIn, ruleForHead, type Basis } from './proposal.ts';
@@ -6,6 +7,7 @@ const prefill = (field: BriefField, value: string, reason: string, source = fiel
 // Prepare editable review suggestions; the extraction and pricing functions stay unchanged.
 export function prepareReview(requirements: Requirements, brief: string): Requirements {
   const r = structuredClone(requirements);
+  r.roomNights = roomsFromBrief(r,brief);
   for (const key of ['outOfTownGuests'] as const) {
     const field = r.fields[key];
     const match = /^(\d[\d,]*)\s+of\s+(?:the\s+)?\d/i.exec(field.value);

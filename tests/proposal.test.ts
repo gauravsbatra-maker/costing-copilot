@@ -1,3 +1,4 @@
+import { nightlyRooms, totalRoomNights, roomsFromBrief } from '../shared/roomNights.ts';
 import { costLabel, costText } from '../shared/displayLabels.ts';
 import { editProposal, applyLineContingencies, lineKey } from '../shared/lineEdits.ts';
 import { test } from 'node:test';
@@ -320,4 +321,31 @@ test('proposal display labels remove the past hotel and name guest rooms in ever
  assert.equal(costText(source,[old]),'Overall WIP · Food & beverage (minimum guarantee) · row 5');
  assert.equal(source,`Overall WIP · ${old} · row 5`);
  assert.equal(costText(`${old} — meal row: ${source}`,[old]),'Food & beverage (minimum guarantee) — meal row: Overall WIP · Food & beverage (minimum guarantee) · row 5');
+});
+
+test('per-night room counts price 70 room nights at the quoted rate, preserve other heads and support old stays',()=>{
+ const brief='Hotel Four Seasons, ₹40,000/room night – 30 rooms Night 1, 40 rooms Night 2';
+ const r=requirements();
+ r.fields.rooms={value:'',status:'missing',source:'',reason:''};
+ r.fields.nights={value:'',status:'missing',source:'',reason:''};
+ r.fields.roomRate={value:'₹40,000/room night',status:'provided',source:brief,reason:''};
+ const reviewed=prepareReview(r,brief);
+ assert.deepEqual(reviewed.roomNights?.map(row=>row.value),['30','40']);
+ assert.equal(totalRoomNights(reviewed.roomNights!),70);
+ const before=buildProposal(budget,r,{}, {}, {},true,60);
+ const after=buildProposal(budget,reviewed,{}, {}, {},true,60);
+ const room=after.heads.flatMap(h=>h.lines).find(l=>l.label==='Accommodation · rooms and nights')!;
+ assert.equal(room.amount,2800000);
+ assert.deepEqual(room.pricing,{quantity:70,unitCost:40000,multiplier:1});
+ assert.deepEqual(after.heads[0].lines.filter(l=>l.label!==room.label),before.heads[0].lines.filter(l=>l.label!==room.label));
+ const legacy=requirements();
+ legacy.fields.rooms.value='40 rooms at the venue hotel';
+ assert.deepEqual(nightlyRooms(legacy).map(row=>row.value),['40','40']);
+ const repeated=prepareReview(legacy,detailedBrief);
+ assert.equal(buildProposal(budget,repeated,{}, {}, {},true,60).total,buildProposal(budget,legacy,{}, {}, {},true,60).total);
+ const zero={...reviewed,roomNights:reviewed.roomNights!.map(row=>({...row,value:'0'}))};
+ assert.equal(buildProposal(budget,zero,{}, {}, {},true,60).heads.flatMap(h=>h.lines).find(l=>l.label==='Accommodation · rooms and nights')!.amount,0);
+ assert.deepEqual(roomsFromBrief(r,'Night 1: 30 rooms, Night 2: 40 rooms').map(row=>row.value),['30','40']);
+ assert.equal(totalRoomNights(roomsFromBrief(r,'30 rooms Night 1, 40 rooms Night 1')),null);
+ assert.equal(totalRoomNights([...reviewed.roomNights!,{value:'',status:'missing',source:'',reason:''}]),null);
 });
