@@ -63,5 +63,10 @@
 - Live Save opens the sign-in panel above the current scroll position. A production sign-up attempt fails because JWT_PRIVATE_KEY is missing; JWKS is also not configured. Production sign-in and environment variables remain unchanged.
 - Save now scrolls the sign-in panel into view and focuses Email. The regression test failed before the fix and passes with it; Chrome also verified this at phone width with the unchanged real-input total. All 46 code tests, 11 browser tests and the build passed.
 - User authorized committing and pushing the label and scroll/focus fixes with data-file exclusions. No deployment requested.
+## Current follow-up — account links and saved costing labels
+- Separate the account-mode link and Back to costing with vertical space, retaining all existing labels and sign-in behavior.
+- My costings displays event type, saved brief dates and city, using city alone when event type or dates are missing. Derive labels for older snapshots without changing their stored content; unreadable legacy snapshots retain their existing title.
+- All 47 code tests, 11 browser tests and the build passed. Chrome checked both account modes at phone width and a new saved costing label; list tests cover older snapshots and city-only fallbacks.
+- User authorized committing and pushing with the usual data-file exclusions. No deployment requested.
 ## Parked
 None.

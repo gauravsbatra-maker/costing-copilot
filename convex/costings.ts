@@ -1,6 +1,7 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { savedCostingLabel } from '../shared/savedCostingLabel';
 import { readSavedCosting } from '../shared/savedCosting';
 export const save = mutation({
   args: { snapshot: v.string() }, returns: v.id('costings'),
@@ -8,7 +9,7 @@ export const save = mutation({
     const owner = await getAuthUserId(ctx);
     if (!owner) throw new Error('Sign in to save this costing.');
     const saved = readSavedCosting(snapshot);
-    return await ctx.db.insert('costings', {owner, snapshot, total:saved.total, title: saved.requirements.fields.city.value || 'Saved costing'});
+    return await ctx.db.insert('costings', {owner, snapshot, total:saved.total, title: savedCostingLabel(snapshot, saved.requirements.fields.city.value || 'Saved costing')});
   },
 });
 export const list = query({
@@ -17,7 +18,7 @@ export const list = query({
     const owner = await getAuthUserId(ctx);
     if (!owner) return [];
     const rows = await ctx.db.query('costings').withIndex('by_owner',q=>q.eq('owner',owner)).order('desc').take(100);
-    return rows.map(r=>({id:r._id,title:r.title,total:r.total}));
+    return rows.map(r=>({id:r._id,title:savedCostingLabel(r.snapshot,r.title),total:r.total}));
   },
 });
 export const get = query({

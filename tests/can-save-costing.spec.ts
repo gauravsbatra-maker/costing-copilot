@@ -31,7 +31,16 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await expect(page.getByLabel('Email',{exact:true})).toBeFocused();
  await expect(page.getByLabel('Email',{exact:true})).toBeInViewport();
  await expect(page.getByRole('region',{name:'My costings',exact:true}).getByRole('heading',{name:'My costings',exact:true})).toBeInViewport();
+ const panel=page.getByRole('region',{name:'My costings',exact:true});
+ const checkLinkSpacing=async(name:string)=>{
+  const toggle=await panel.getByRole('button',{name,exact:true}).boundingBox();
+  const back=await panel.getByRole('button',{name:'Back to costing',exact:true}).boundingBox();
+  expect(toggle).not.toBeNull();expect(back).not.toBeNull();
+  expect(back!.y-(toggle!.y+toggle!.height)).toBeGreaterThanOrEqual(12);
+ };
+ await checkLinkSpacing('Create an account');
  await page.getByRole('button',{name:'Create an account',exact:true}).click();
+ await checkLinkSpacing('Use an existing account');
  const email=`costing-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
  const password='Invented-test-password-2026!';
  await page.getByLabel('Email',{exact:true}).fill(email);
@@ -45,6 +54,7 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await page.getByLabel('Email',{exact:true}).fill(email);
  await page.getByLabel('Password',{exact:true}).fill(password);
  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await expect(panel.locator('li > strong')).toHaveText('Wedding · Last week of Dec 2026 · Jaipur');
  await page.getByRole('button',{name:'Open costing',exact:true}).click();
  await expect(proposal.locator('.proposal-total')).toHaveText(total);
  expect(await proposal.locator('.proposal-head').allTextContents()).toEqual(before);

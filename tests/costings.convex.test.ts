@@ -17,3 +17,22 @@ test('saved costings are private to their owner, including direct links',async()
  expect(await t.query(api.costings.get,{id})).toBeNull();
  await expect(a.mutation(api.costings.save,{snapshot:JSON.stringify({...JSON.parse(snapshot),workbook:'bytes'})})).rejects.toThrow('incomplete');
 });
+
+test('list labels show event, brief dates and city for older saves and safely fall back to city',async()=>{
+ const t=convexTest(schema,modules);
+ const owner=await t.run(ctx=>ctx.db.insert('users',{email:'labels@example.test'}));
+ const a=t.withIdentity({subject:owner});
+ const base={brief:'Wedding brief',requirements:{fields:{city:{value:'Mumbai'},dates:{value:'14–15 Feb'}}}};
+ const copies=[base,{...base,brief:'Please plan the event.'},{...base,requirements:{fields:{city:{value:'Mumbai'}}}}, {...base,requirements:{fields:{city:{value:'Mumbai'},dates:{value:'Not stated in brief'}}}}];
+ const ids=await t.run(async ctx=>{
+  const ids=[];
+  for(const copy of copies) ids.push(await ctx.db.insert('costings',{owner,snapshot:JSON.stringify(copy),title:'Mumbai',total:'Original total'}));
+  ids.push(await ctx.db.insert('costings',{owner,snapshot:'older unreadable snapshot',title:'Mumbai',total:'Original total'}));
+  return ids;
+ });
+ const rows=await a.query(api.costings.list,{});
+ expect(rows.find(r=>r.id===ids[0])?.title).toBe('Wedding · 14–15 Feb · Mumbai');
+ for(const id of ids.slice(1)) expect(rows.find(r=>r.id===id)?.title).toBe('Mumbai');
+ for(const row of rows) expect(row.total).toBe('Original total');
+ expect(JSON.parse((await a.query(api.costings.get,{id:ids[0]}))!)).toEqual(base);
+});
