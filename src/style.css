@@ -4,7 +4,7 @@
   background: #f7f3ec;
   font-synthesis: none;
   --ink: #22252b;
-  --muted: #5c605c;
+  --muted: #22252b;
   --limewash: #f7f3ec;
   --linen: #fcfaf6;
   --champagne: #efe3cf;
@@ -13,7 +13,7 @@
   --blush: #f1d5cc;
   --rule: #d6cfc1;
   --gold: #b8955a;
-  --action: #1e4fa3;
+  --action: #b6422d;
   --brick: #a3322a;
 }
 * { box-sizing: border-box; }
@@ -25,9 +25,9 @@ h1 { margin: 16px 0; }
 h2 { margin: 0 0 20px; }
 h3, h4 { font-size: 16px; font-weight: 500; line-height: 1.5; margin: 32px 0 12px; }
 p { color: var(--muted); margin: 12px 0 20px; line-height: 1.65; }
-small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+small { display: block; font-size: 16px; font-weight: 400; color: var(--muted); line-height: 1.6; margin-top: 6px; }
 strong, th, b { font-weight: 500; }
-.eyebrow { font-size: 12px; font-weight: 400; letter-spacing: .08em; color: var(--muted); }
+.eyebrow { font-size: 16px; font-weight: 400; letter-spacing: .08em; color: var(--muted); }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { width: auto; padding: 0; border: 0; background: transparent; text-align: left; font-weight: 400; cursor: pointer; }
 button:disabled { opacity: .5; cursor: default; }
@@ -35,24 +35,24 @@ button, input, textarea, select, summary { -webkit-tap-highlight-color: #d3e6da;
 :where(button,input,textarea,select,summary):focus-visible { outline: 2px solid var(--action); outline-offset: 4px; }
 ::selection { background: var(--mint); color: var(--ink); }
 input, textarea { caret-color: var(--action); }
-input::placeholder, textarea::placeholder { color: #666760; opacity: 1; }
+input::placeholder, textarea::placeholder { color: #22252b; opacity: 1; }
 input:not([type='file']):not([type='checkbox']), textarea, select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #b8b5a9; border-radius: 4px; padding: 10px 12px; background: var(--linen); }
 textarea { display: block; resize: vertical; line-height: 1.6; }
 .read-brief { display: inline-block; width: auto; padding: 12px 22px; border: 1px solid var(--action); border-radius: 4px; background: var(--action); color: #fff; text-align: center; }
-.read-brief:not(:disabled):hover { background: #183e7e; }
+.read-brief:not(:disabled):hover { background: #963522; }
 .add-detail { display: inline-block; width: auto; padding: 8px 0; color: var(--ink); font-size: 16px; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: #8c9187; }
 .add-detail:not(:disabled):hover { text-decoration-color: var(--ink); }
 .brief-reader, .upload { padding: 32px; margin-bottom: 40px; border-radius: 6px; border: 1px solid var(--rule); }
 .brief-reader { background: var(--linen); }
 .upload { background: var(--champagne); }
-.upload label { display: block; font-size: 16px; font-weight: 500; }
+.upload label { display: block; font-family: 'Bodoni Moda', serif; font-size: 36px; font-weight: 400; line-height: 1.2; }
 .upload p { margin: 8px 0 24px; }
 .upload input { display: block; max-width: 100%; }
-.upload input::file-selector-button { padding: 12px 18px; margin-right: 16px; color: var(--ink); font: inherit; background: var(--linen); border: 1px solid #9f9b90; border-radius: 4px; cursor: pointer; }
+.upload input::file-selector-button { padding: 12px 18px; margin-right: 16px; color: #fff; font: inherit; background: var(--action); border: 1px solid var(--action); border-radius: 4px; cursor: pointer; }
 .upload small { margin-top: 20px; }
 .brief-tabs { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 28px; border-bottom: 1px solid var(--rule); }
 .brief-tabs button { padding: 8px 0 12px; color: var(--muted); border-bottom: 1px solid transparent; }
-.brief-tabs [aria-selected='true'] { color: var(--ink); border-bottom-color: var(--ink); }
+.brief-tabs [aria-selected='true'] { color: var(--ink); border-bottom: 3px solid var(--ink); font-weight: 600; }
 .brief-entry { display: grid; grid-template-columns: minmax(0,3fr) minmax(0,1fr); gap: 32px; align-items: start; }
 .brief-entry.form-entry { grid-template-columns: minmax(0,1fr); }
 .brief-entry>div>label { font-weight: 500; }
@@ -86,12 +86,12 @@ textarea { display: block; resize: vertical; line-height: 1.6; }
 }
 .costing-review:not(:has([aria-label='Costed proposal']))>button.add-detail { padding: 12px 22px; border: 1px solid var(--action); border-radius: 4px; background: var(--action); color: #fff; text-decoration: none; }
 .costing-review:has([aria-label='Costed proposal'])>button.add-detail { padding: 12px 22px; border: 1px solid #aaa79b; border-radius: 4px; text-decoration: none; }
-.invoice-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(320px,380px); gap: 48px; align-items: start; margin-top: 32px; }
+.invoice-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(360px,440px); gap: 48px; align-items: start; margin-top: 32px; }
 .invoice-items { min-width: 0; }
 .invoice-summary { position: sticky; top: 28px; min-width: 0; padding: 24px; border: 1px solid var(--rule); border-top-color: var(--gold); border-radius: 4px; background: var(--mint); overflow-wrap: anywhere; }
-.invoice-summary p { color: #404e46; }
+.invoice-summary p { color: #22252b; }
 .invoice-summary .read-brief { width: 100%; }
-.invoice-summary>.read-brief+p { font-size: 12px; margin-bottom: 0; }
+.invoice-summary>.read-brief+p { font-size: 16px; margin-bottom: 0; }
 .proposal-head { margin: 0 0 40px; }
 .proposal-head h3 { margin-top: 0; }
 .proposal-head>h3 { padding-bottom: 16px; border-bottom: 1px solid var(--gold); }
@@ -105,23 +105,23 @@ li { margin-bottom: 10px; }
 ul { padding-left: 22px; }
 .proposal-total { margin-top: 0; font-size: 16px; font-weight: 500; color: var(--ink) !important; font-variant-numeric: tabular-nums; }
 .proposal-total:has(+.per-guest) { margin-bottom: 8px; }
-.per-guest { color: var(--brick) !important; font-size: 12px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.per-guest { color: var(--brick) !important; font-size: 16px; margin-top: 8px; font-variant-numeric: tabular-nums; }
 .total-with-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 16px 24px; margin-top: 20px; }
 .invoice-summary .total-with-status { margin-top: 0; }
 .total-figures { flex: 1 1 340px; min-width: 0; }
-.pricing-status { flex: 1 1 240px; font-size: 12px; overflow-wrap: anywhere; }
+.pricing-status { flex: 1 1 240px; font-size: 16px; overflow-wrap: anywhere; }
 .pricing-status p { margin: 0; font-weight: 400; }
 .pricing-status ul { padding-left: 18px; margin: 8px 0 0; }
 .priced-status { color: var(--muted); }
-.head-share { font-size: 12px; }
+.head-share { font-size: 16px; }
 .result-heading { display: flex; justify-content: space-between; gap: 24px; align-items: baseline; margin-top: 48px; }
 .result-heading p { margin: 8px 0; }
-.result-heading>span { white-space: nowrap; color: var(--muted); font-size: 12px; }
-.hint { font-size: 12px; max-width: 75ch; }
+.result-heading>span { white-space: nowrap; color: var(--muted); font-size: 16px; }
+.hint { font-size: 16px; max-width: 75ch; }
 .table-wrap { border: 1px solid var(--rule); border-radius: 4px; background: var(--linen); }
 table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 th, td { padding: 18px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-thead { background: var(--sea-glass); font-size: 12px; }
+thead { background: var(--sea-glass); font-size: 16px; }
 td, thead th:not(:first-child) { text-align: right; }
 th:first-child { width: 46%; }
 td { white-space: nowrap; }
@@ -140,28 +140,28 @@ tfoot th, tfoot td { border-bottom: 0; }
 .proposal-review th, .proposal-review td { min-width: 0; width: auto; white-space: normal; text-align: left; vertical-align: top; padding: 14px 10px; }
 .proposal-review th:first-child { width: 22%; }
 .proposal-review th:nth-child(4) { width: 28%; }
-.review-source { display: block; margin-bottom: 12px; font-size: 12px; }
+.review-source { display: block; margin-bottom: 12px; font-size: 16px; }
 .account-nav, .account-panel { max-width: 1440px; margin: 0 auto; padding: 24px 64px; overflow-wrap: anywhere; }
 .account-nav { display: flex; justify-content: flex-end; gap: 24px; }
-.account-nav button { font-size: 12px; }
+.account-nav button { font-size: 16px; }
 .account-panel { padding-top: 32px; padding-bottom: 48px; background: var(--linen); border-block: 1px solid var(--rule); }
 .account-panel form { max-width: 420px; display: grid; gap: 24px; margin: 24px 0; }
 .account-panel ul { list-style: none; padding: 0; margin: 32px 0; }
 .account-panel li { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 8px 24px; padding: 24px 0; margin: 0; border-top: 1px solid var(--rule); }
 .account-panel li>strong, .account-panel li>div, .account-panel li>p { grid-column: 1; }
 .account-panel li>strong { font-size: 16px; }
-.account-panel li>div { font-size: 12px; color: var(--muted); }
+.account-panel li>div { font-size: 16px; color: var(--muted); }
 .account-panel li>p { margin: 8px 0 0; font-variant-numeric: tabular-nums; }
 .account-panel li>button { align-self: center; grid-row: 1 / span 3; }
 .account-panel li>button:first-of-type { grid-column: 2; }
 .account-panel li>button:last-of-type { grid-column: 3; }
 .account-panel>.add-detail { display: block; width: fit-content; margin-top: 20px; }
 /* Four summary columns remain present at phone width. */
-table.cost-summary { display: table; width: 100%; table-layout: fixed; margin: 24px 0; font-size: 12px; }
-.cost-summary col:nth-child(1) { width: 34%; }
-.cost-summary col:nth-child(2) { width: 29%; }
-.cost-summary col:nth-child(3) { width: 22%; }
-.cost-summary col:nth-child(4) { width: 15%; }
+table.cost-summary { display: table; width: 100%; table-layout: fixed; margin: 24px 0; font-size: 16px; }
+.cost-summary col:nth-child(1) { width: 28%; }
+.cost-summary col:nth-child(2) { width: 32%; }
+.cost-summary col:nth-child(3) { width: 23%; }
+.cost-summary col:nth-child(4) { width: 17%; }
 .cost-summary thead { display: table-header-group; position: static; width: auto; height: auto; overflow: visible; clip-path: none; background: transparent; }
 .cost-summary tbody { display: table-row-group; }
 .cost-summary tfoot { display: table-footer-group; font-weight: 600; background: transparent; }
@@ -185,7 +185,7 @@ table.cost-summary { display: table; width: 100%; table-layout: fixed; margin: 2
 .service-note-input textarea { flex: 1; width: 0; }
 .service-note-input small { flex: 0 1 80px; margin: 0; }
 .service-note { overflow-wrap: anywhere; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-height: 1.6; }
 @media (max-width: 1100px) {
   .invoice-layout { grid-template-columns: minmax(0,1fr); gap: 32px; }
   .invoice-summary { position: static; }
@@ -199,42 +199,44 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-heig
   .brief-tabs { gap: 20px; }
   .brief-tabs button { font-size: 16px; }
   .headcount-flag { padding: 18px; }
-  .invoice-summary { padding: 16px; }
+  .invoice-summary { padding: 16px 0; border-inline: 0; border-radius: 0; }
   .line-inputs { grid-template-columns: minmax(0,1fr); gap: 16px; }
   .result-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
-  th, td { padding: 12px 6px; font-size: 12px; }
+  th, td { padding: 12px 6px; font-size: 16px; }
   .item th { padding-left: 16px; }
   .table-wrap table, .table-wrap thead, .table-wrap tbody, .table-wrap tfoot { display: block; }
   .table-wrap tr { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-bottom: 1px solid var(--rule); }
   .table-wrap th, .table-wrap td { width: auto; min-width: 0; padding: 10px 8px; border: 0; }
   .table-wrap th:first-child { grid-column: 1 / -1; width: auto; }
-  .table-wrap td { white-space: nowrap; overflow-wrap: normal; }
-  .upload input { font-size: 12px; }
+  .table-wrap td { white-space: normal; overflow-wrap: anywhere; }
+  .upload input { font-size: 16px; }
   .upload input::file-selector-button { font-size: 16px; margin: 0 0 12px; }
   .proposal-review thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .proposal-review table, .proposal-review tbody, .proposal-review tr, .proposal-review th, .proposal-review td { display: block; width: 100%; }
   .proposal-review tr { padding: 20px 0; border-bottom: 1px solid var(--rule); }
   .proposal-review th, .proposal-review td { padding: 6px 0; border: 0; font-size: 16px; }
   .proposal-review th:first-child { width: 100%; }
-  .proposal-review td::before { content: attr(data-label); display: block; font-size: 12px; font-weight: 400; margin-bottom: 4px; color: var(--muted); }
+  .proposal-review td::before { content: attr(data-label); display: block; font-size: 16px; font-weight: 400; margin-bottom: 4px; color: var(--muted); }
   .account-nav, .account-panel { padding-left: 18px; padding-right: 18px; }
   .account-panel li { grid-template-columns: auto 1fr; gap: 8px 24px; }
   .account-panel li>strong, .account-panel li>div, .account-panel li>p { grid-column: 1 / -1; }
   .account-panel li>button { grid-row: auto; }
   .account-panel li>button:first-of-type { grid-column: 1; }
   .account-panel li>button:last-of-type { grid-column: 2; justify-self: start; }
-  table.cost-summary { display: table; font-size: 12px; }
-  .cost-summary col:nth-child(1) { width: 31%; }
-  .cost-summary col:nth-child(4) { width: 18%; }
+  table.cost-summary { display: table; font-size: 16px; }
+  .cost-summary col:nth-child(1) { width: 20%; }
+  .cost-summary col:nth-child(2) { width: 36%; }
+  .cost-summary col:nth-child(3) { width: 22%; }
+  .cost-summary col:nth-child(4) { width: 22%; }
   .cost-summary thead { display: table-header-group; position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
   .cost-summary tbody { display: table-row-group; }
   .cost-summary tfoot { display: table-footer-group; }
   .cost-summary tr { display: table-row; padding: 0; }
-  .cost-summary th, .cost-summary td { display: table-cell; width: auto; padding: 10px 3px; font-size: 12px; border-bottom: 1px solid #afc3b5; }
+  .cost-summary th, .cost-summary td { display: table-cell; width: auto; padding: 10px 3px; font-size: 16px; border-bottom: 1px solid #afc3b5; }
   .cost-summary th:first-child { width: auto; }
   .cost-summary td::before { content: none; }
-  .brief-form-layout { font-size: 12px; }
-  .brief-form-layout th, .brief-form-layout td { padding: 12px 3px; font-size: 12px; }
+  .brief-form-layout { font-size: 16px; }
+  .brief-form-layout th, .brief-form-layout td { padding: 12px 3px; font-size: 16px; }
   .brief-form-layout input, .brief-form-layout textarea { padding: 8px 4px; font-size: 16px; }
   .form-count { gap: 5px; }
   .service-note-input { flex-wrap: wrap; }
@@ -244,3 +246,33 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-heig
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
+
+/* Strong working-screen hierarchy; all existing text and controls stay in place. */
+header { max-width: 1040px; }
+h1 { font-size: 56px; line-height: 1.12; letter-spacing: -.025em; }
+header>p { max-width: 72ch; }
+.requirements>h2, [aria-label='Costed proposal']>h2,
+.account-panel>h2, .result-heading h2 { font-size: 48px; line-height: 1.18; }
+.proposal-review>.add-detail,
+.account-panel li:first-child>button:first-of-type {
+  background: var(--action); border: 1px solid var(--action); border-radius: 4px;
+  color: #fff; text-decoration: none; padding: 12px 22px;
+}
+.proposal-review>.add-detail:hover,
+.account-panel li:first-child>button:first-of-type:hover { background: #963522; }
+.read-brief:disabled { opacity: 1; background: #b6422d; color: #fff; border-color: #b6422d; cursor: not-allowed; }
+@media(max-width:600px) {
+  h1 { font-size: 40px; }
+  .requirements>h2, [aria-label='Costed proposal']>h2,
+  .account-panel>h2, .result-heading h2 { font-size: 36px; }
+  .account-panel li { column-gap: 16px; }
+}
+
+/* Keep the main save action visible before the longer summary, with unchanged behavior. */
+.invoice-summary { display: flex; flex-direction: column; }
+.invoice-summary>.total-with-status { order: 0; }
+.invoice-summary>.read-brief { order: 1; margin-top: 24px; }
+.invoice-summary>.cost-summary { order: 2; }
+.invoice-summary>p { order: 3; }
+.costing-review:not(:has([aria-label='Costed proposal']))>button.add-detail:disabled,
+.account-panel li:first-child>button:first-of-type:disabled { opacity: 1; cursor: not-allowed; }

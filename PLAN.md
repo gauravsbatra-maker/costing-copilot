@@ -125,5 +125,10 @@
 - Preserve all pricing, sources, state and flows. Update only the existing test's old per-guest red expectation to DESIGN.md brick red; keep its number, persistence and phone-fit assertions intact.
 - Capture before/after desktop (1440px) and phone (390px) images outside the repo, including the form and both review views. Real client images remain outside git; saved-account captures use invented data.
 - All 56 code tests, 16 browser tests and the build passed. Chrome confirmed the unchanged wedding midpoint, immediate edit/reset totals and no phone overflow. A phone summary-cell overflow caught by the existing tests was fixed by widening that column; sheet amounts use three readable columns beneath each head on phones. User authorized commit and push with data-file exclusions; no deployment requested.
+## Current follow-up — stronger working-screen type and actions
+- Apply the approved first-screen headline and subline; enlarge existing working-view serif titles, keep every body/label/note/table text at least 16px in dark ink, and strengthen selected tabs with bold text and a clear underline.
+- Use solid terracotta main actions with white text while retaining disabled behavior, and keep Save visible ahead of the long summary through styling. Retain limewash/linen grounds, margins, labels, rules and flow.
+- Refresh the external before/after gallery at desktop and 390px using the existing reviewed wedding brief and original sheet. Keep screenshots and real data out of the repo; use invented data for account examples.
+- All 56 code tests, 16 browser tests and the build passed. Chrome verified the unchanged wedding midpoint, edit/reset totals, account actions and no sideways phone scrolling. The external gallery has fresh before/after captures for all working views. User authorized commit and push with data-file exclusions. No deployment requested.
 ## Parked
 None.

@@ -7,6 +7,14 @@ Headline: From the host's brief to a costed proposal, in one sitting.
 Under it: Paste the brief, add a past project's costing sheet, check what we found, then get a costed proposal where every number shows where it came from.
 Button: Start with the brief
 
+### Working-screen revision · approved 10 October 2026
+- Keep the first-screen headline and subline above exactly as written.
+- Every working view has a large Bodoni Moda headline: first-screen and proposal-page titles are 56px desktop / 40px phone; requirement, sheet and saved-list titles are 48px desktop / 36px phone.
+- All body text, notes, figures, labels and table text are Jost at 16px or larger, in dark ink #22252B. Keep amber warnings and the red per-guest line meaningful.
+- Main actions are solid terracotta #B6422D with white text, including disabled main actions; their disabled behavior stays intact. This overrides Part 2's blue-control rule for working screens only.
+- Active tabs use a dark 3px underline and weight 600. Retain limewash/linen grounds, wide margins and the invoice layout. Keep the main Save action visible above the long summary table through visual layout only.
+- Reference: Aesop's calm spacing and strong serif headlines. No calculation, source, control wording or flow changes, except the explicitly approved first-screen headline and subline.
+
 ### Reference: Stripe's invoice editor
 Take: the line items on the left with a live total on the right, one clear send button, and quiet type with lots of space.
 Ignore: the fintech blues and greys, the dashboard sidebar, and the developer jargon.
