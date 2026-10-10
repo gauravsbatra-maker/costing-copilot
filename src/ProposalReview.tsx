@@ -1,3 +1,4 @@
+import {perGuestLine,midpointShares} from '../shared/costDisplay';
 import { costLabel, costText } from '../shared/displayLabels';
 import { reviewEvent } from '../shared/reviewEvent';
 import type { Requirements } from '../shared/brief';
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export default function ProposalReview({ brief, requirements, proposal, original, contingent, checks, edits, percentages, defaults, onBack }: Props) {
+  const perGuest=perGuestLine(requirements,contingent), shares=midpointShares(contingent);
   const event = reviewEvent(brief,requirements.fields.days);
   const missing = event.type ? checks.missing : ['Event type: Not stated in brief.', ...checks.missing];
   const value = (text: string) => text.trim() || 'Not recorded in confirmed requirements';
@@ -54,7 +56,7 @@ export default function ProposalReview({ brief, requirements, proposal, original
           const percent=(rate:number|null|undefined)=>rate===null || rate===undefined ? 'Missing or invalid' : `${rate}%`;
           return <tr key={head.name}>
             <th scope="row">{costLabel(head.name)}{changed&&<small>Edited by you</small>}</th>
-            <td data-label="Range">{contingent ? range ? `${rupees(range.low)}–${rupees(range.high)}` : 'To quote' : 'Check contingency percentage'}</td>
+            <td data-label="Range">{contingent ? range ? `${rupees(range.low)}–${rupees(range.high)}` : 'To quote' : 'Check contingency percentage'}{shares[head.name]&&<small className="head-share">{shares[head.name]}</small>}</td>
             <td data-label="Midpoint">{range ? rupees(range.midpoint) : 'To quote'}</td>
             <td data-label="Source row">{sources.map(source=><span className="review-source" key={source}>{source.startsWith('Client brief') && head.lines.some(line=>line.source===source && costLabel(line.label)==='Guest rooms') && <><strong>Guest rooms</strong><br/></>}{source}</span>)}</td>
             <td data-label="Contingency %">{uniform ? percent(rates[0]) : head.lines.map((line,i)=><span className="review-source" key={i}>{costLabel(line.label)}: {percent(rates[i])}</span>)}</td>
@@ -63,5 +65,6 @@ export default function ProposalReview({ brief, requirements, proposal, original
       </table>
     </section>
     <p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
+      {perGuest&&<p className="per-guest">{perGuest}</p>}
   </main>;
 }

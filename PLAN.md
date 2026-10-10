@@ -96,5 +96,10 @@
 - Use an optional saved timestamp and indexed recent-owner reads, retaining older snapshots and newest-first order. Convex transaction retries protect concurrent saves; distinct briefs, totals or owners remain separate.
 - All 51 code tests, 14 browser tests and the build passed. Chrome verified a double-click disables Save and leaves one entry. Tests cover concurrent updates, expiry, distinct totals and owner isolation. The existing detailed real-AI test timed out once and passed on the full rerun unchanged.
 - User authorized commit and push with data-file exclusions. Development backend checked; no production deployment requested.
+## Current follow-up — per-guest figures and cost shares
+- Below the existing pre-GST total, display a smaller red bracketed range and midpoint per guest, rounded to whole rupees, naming the largest dinner count or lunch when there is no dinner.
+- Show each head's share of the current total midpoint on the costed and review screens. Allocate rounding tenths by largest remainder so displayed shares add to 100.0%; leave all costing data, saved totals and prices unchanged.
+- All 53 code tests, 14 browser tests and the build passed. Tests cover rounding, dinner/lunch basis, no guest count, unquoted heads, shares summing to 100.0% and unchanged inputs. Chrome verified the wedding display on both screens, unchanged total and no sideways scrolling at phone width.
+- User authorized commit and push with data-file exclusions. No deployment requested.
 ## Parked
 None.

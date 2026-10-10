@@ -47,3 +47,6 @@ select:focus-visible, summary:focus-visible { outline: 2px solid #1e4fa3; outlin
 @media(max-width:600px) { .account-nav,.account-panel { padding:0 16px; } }
 
 .account-panel > .add-detail { display:block; width:fit-content; margin-top:16px; }
+
+.proposal-total:has(+ .per-guest) { margin-bottom: 4px; }
+.per-guest { color: #a52c25; font-size: 14px; margin-top: 4px; font-variant-numeric: tabular-nums; }

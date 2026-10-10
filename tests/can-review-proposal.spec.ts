@@ -42,6 +42,12 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  await expect(proposal.getByText(/^Guest rooms · ₹/)).toBeVisible();
  await expect(proposal.getByText('Overall WIP · Taj Hotel Expenses · row 4',{exact:true})).toHaveCount(2);
  for(const source of await proposal.getByText('Overall WIP · Taj Hotel Expenses · row 4',{exact:true}).all())await expect(source).toBeVisible();
+ const expectedPerGuest=(()=>{const values=total.match(/₹[\d,.]+/g)!.map(s=>Number(s.slice(1).replaceAll(',','')));const money=(n:number)=>'₹'+Math.round(n/1000).toLocaleString('en-IN');return `(≈ ${money(values[0])}–${money(values[1])} per guest · midpoint ${money(values[2])} · on 1,000 guests)`;})();
+ await expect(proposal.locator('.proposal-total + .per-guest')).toHaveText(expectedPerGuest);
+ await expect(proposal.locator('.per-guest')).toHaveCSS('color','rgb(165, 44, 37)');
+ const shares=await proposal.locator('.head-share').allTextContents();
+ expect(shares).toHaveLength(10);
+ expect(shares.reduce((sum,text)=>sum+Math.round(parseFloat(text)*10),0)).toBe(1000);
  const headPrices=await proposal.locator('.proposal-head > h3').allTextContents();
  const checks=proposal.getByRole('region',{name:'Check before you send',exact:true});
  const lists=await checks.locator(':scope > ul').allTextContents();
@@ -80,6 +86,8 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  await expect(transfers).toContainText('Edited by you');await expect(transfers).toContainText('20%');
  await expect(transfers).toContainText('Overall WIP · Guests Transfer (Toyota Crysta) · row 8');
  await expect(review.locator('.proposal-total')).toHaveText(total);
+ await expect(review.locator('.proposal-total + .per-guest')).toHaveText(expectedPerGuest);
+ expect(await review.locator('.head-share').allTextContents()).toEqual(shares);
  await expect(review.locator('input,select,textarea')).toHaveCount(0);
  await expect(review.getByRole('button')).toHaveCount(1);
  expect(await review.innerText()).not.toMatch(/deliverables|timelines|export/i);

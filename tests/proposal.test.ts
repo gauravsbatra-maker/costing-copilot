@@ -1,3 +1,4 @@
+import {perGuestLine,midpointShares} from '../shared/costDisplay.ts';
 import {dailyHeadcountOptions} from '../shared/reviewChoices.ts';
 import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
 import { nightlyRooms, totalRoomNights, roomsFromBrief } from '../shared/roomNights.ts';
@@ -387,4 +388,25 @@ test('function headcount defaults to dinner, falls back to lunch and day totals 
  assert.equal(dailyHeadcountOptions(r)[0].total,650);
  r.functions[0].guests.value='';
  assert.equal(dailyHeadcountOptions(r)[0].total,null);
+});
+
+test('per-guest display rounds whole rupees using the largest dinner, or lunch without dinner, without changing costs',()=>{
+ const r=requirements();
+ const costing={total:{low:41102000,high:50236000,midpoint:45669000},heads:{}};
+ const before=structuredClone(costing);
+ assert.equal(perGuestLine(r,costing),'(≈ ₹41,102–₹50,236 per guest · midpoint ₹45,669 · on 1,000 guests)');
+ r.functions=r.functions.filter(f=>mealKind(f.name.value)!=='dinner');
+ assert.equal(perGuestLine(r,costing),'(≈ ₹1,64,408–₹2,00,944 per guest · midpoint ₹1,82,676 · on 250 guests)');
+ r.functions=[];assert.equal(perGuestLine(r,costing),null);
+ assert.deepEqual(costing,before);
+});
+test('head midpoint shares round to one decimal and add to 100.0%, without changing costs',()=>{
+ const range={low:1,high:1,midpoint:1};
+ const h={percentage:0,reason:'',range,reserve:null};
+ const costing={total:{low:3,high:3,midpoint:3},heads:{A:h,B:h,C:h,Unquoted:{...h,range:null}}};
+ const before=structuredClone(costing);
+ assert.deepEqual(midpointShares(costing),{A:'33.4% of total',B:'33.3% of total',C:'33.3% of total',Unquoted:'0.0% of total'});
+ assert.equal(Object.values(midpointShares(costing)).reduce((sum,text)=>sum+Math.round(parseFloat(text)*10),0),1000);
+ assert.deepEqual(midpointShares(null),{});
+ assert.deepEqual(costing,before);
 });
