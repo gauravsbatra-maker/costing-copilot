@@ -30,7 +30,7 @@ export default function App() {
     finally { if (request.current === id) setBusy(false); }
   }
   return <SavedCostings onOpen={copy=>{++request.current;setSaved(copy);setBudget(copy.budget);setFileName('Saved source rows');setReviewPage(null);setBuilderKey(k=>k+1);}} onSignOut={()=>{if(saved){setSaved(null);setBudget(null);setReviewPage(null);setBuilderKey(k=>k+1);}}}><main hidden={reviewPage !== null}>
-    <header><span className="eyebrow">MILESTONE 1 · YOUR COSTING DATA</span><h1>From the host's brief to a costed proposal, in one sitting.</h1><p>Paste the brief, add a past project's costing sheet, check what we found, then get a costed proposal where every number shows where it came from.</p></header>
+    <header><h1>From the host's brief to a costed proposal, in one sitting.</h1><p>Paste the brief, add a past project's costing sheet, check what we found, then get a costed proposal where every number shows where it came from.</p></header>
     <BriefReader key={builderKey} saved={saved} costHeads={budget?.heads.map(head => head.name) ?? []} budget={budget} onReview={setReviewPage} />
     <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><p>Only the Overall WIP tab is used.</p><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
     {busy && <p role="status">Reading your workbook…</p>}
