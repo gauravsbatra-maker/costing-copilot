@@ -101,5 +101,10 @@
 - Show each head's share of the current total midpoint on the costed and review screens. Allocate rounding tenths by largest remainder so displayed shares add to 100.0%; leave all costing data, saved totals and prices unchanged.
 - All 53 code tests, 14 browser tests and the build passed. Tests cover rounding, dinner/lunch basis, no guest count, unquoted heads, shares summing to 100.0% and unchanged inputs. Chrome verified the wedding display on both screens, unchanged total and no sideways scrolling at phone width.
 - User authorized commit and push with data-file exclusions. No deployment requested.
+## Current follow-up — summary table below the totals
+- Add one shared, read-only summary table after the pre-GST and red per-guest lines on both screens, keeping existing head order, labels and midpoint shares. Whole-rupee Indian formatting uses the same guest count; the bold Total row uses the original midpoint and 100.0%.
+- Retain all four visible columns at phone width with wrapping head names. Preserve existing percentages, per-guest wording, saved data, calculations and totals; unquoted heads remain To quote.
+- All 54 code tests, 14 browser tests and the build passed. The two review tests initially matched rows in both tables; scoping the detailed-cost selector fixed them and both passed on rerun. Chrome verified the full wedding table, expected Total figures and phone columns on both screens.
+- User authorized commit and push with data-file exclusions. No deployment requested.
 ## Parked
 None.

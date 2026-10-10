@@ -30,7 +30,7 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  // A missing transfer basis and To quote costs remain visible in the review.
  await open.click();
  await expect(review.getByText(/^Guests Transfer.*Guests the past transfers covered: missing/)).toBeVisible();
- await expect(review.getByRole('row').filter({has:page.getByRole('rowheader',{name:'Guests Transfer (Toyota Crysta)',exact:true})})).toContainText('To quote');
+ await expect(review.getByRole('table',{name:'Reviewed costs',exact:true}).getByRole('row').filter({has:page.getByRole('rowheader',{name:'Guests Transfer (Toyota Crysta)',exact:true})})).toContainText('To quote');
  await review.getByRole('button',{name:'Back to edit',exact:true}).click();
  await expect(open).toBeFocused();
  await page.getByLabel('Guests the past transfers covered',{exact:true}).fill('60');
@@ -49,6 +49,24 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  expect(shares).toHaveLength(10);
  expect(shares.reduce((sum,text)=>sum+Math.round(parseFloat(text)*10),0)).toBe(1000);
  const headPrices=await proposal.locator('.proposal-head > h3').allTextContents();
+ const summary=proposal.getByRole('table',{name:'Cost summary',exact:true});
+ await expect(summary.getByRole('columnheader')).toHaveText(['Expense head','Mean (midpoint, ₹)','Per guest (₹)','% of total']);
+ await expect(summary.locator('tbody tr')).toHaveCount(10);
+ const money=(n:number)=>'₹'+Math.round(n).toLocaleString('en-IN');
+ for(const [i,price] of headPrices.entries()){
+  const midpoint=Number(price.split(' · midpoint ')[1].slice(1).replaceAll(',',''));
+  await expect(summary.locator('tbody tr').nth(i).locator('td')).toHaveText([money(midpoint),money(midpoint/1000),shares[i].replace(' of total','')]);
+ }
+ const totalMidpoint=Number(total.split(' · midpoint ')[1].slice(1).replaceAll(',',''));
+ await expect(summary.locator('tfoot tr')).toHaveText(`Total${money(totalMidpoint)}${money(totalMidpoint/1000)}100.0%`);
+ const summaryText=await summary.innerText();
+ const fitsPhone=async(table:typeof summary)=>{
+  await expect(table.locator('thead')).toBeVisible();
+  const cells=await table.locator('th,td').evaluateAll(cells=>cells.map(cell=>{const rect=cell.getBoundingClientRect();return {left:rect.left,right:rect.right,scroll:cell.scrollWidth,width:cell.clientWidth,display:getComputedStyle(cell).display};}));
+  for(const cell of cells){expect(cell.left).toBeGreaterThanOrEqual(0);expect(cell.right).toBeLessThanOrEqual(390);expect(cell.scroll).toBeLessThanOrEqual(cell.width+1);expect(cell.display).toBe('table-cell');}
+ };
+ await page.setViewportSize({width:390,height:844});await fitsPhone(summary);
+ await page.setViewportSize({width:1440,height:1000});
  const checks=proposal.getByRole('region',{name:'Check before you send',exact:true});
  const lists=await checks.locator(':scope > ul').allTextContents();
  const reads=await page.evaluate(()=>(window as unknown as {sheetReads:number}).sheetReads), calls=actionCalls;
@@ -91,7 +109,9 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  await expect(review.locator('input,select,textarea')).toHaveCount(0);
  await expect(review.getByRole('button')).toHaveCount(1);
  expect(await review.innerText()).not.toMatch(/deliverables|timelines|export/i);
+ expect(await review.getByRole('table',{name:'Cost summary',exact:true}).innerText()).toBe(summaryText);
  await page.setViewportSize({width:390,height:844});
+ await fitsPhone(review.getByRole('table',{name:'Cost summary',exact:true}));
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await review.getByRole('button',{name:'Back to edit',exact:true}).click();
  await expect(proposal.getByLabel('Contingency % for Guests Transfer (Toyota Crysta)',{exact:true})).toHaveValue('20');

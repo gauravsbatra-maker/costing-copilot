@@ -1,3 +1,4 @@
+import CostSummary from './CostSummary';
 import {perGuestLine,midpointShares} from '../shared/costDisplay';
 import { costLabel, costText } from '../shared/displayLabels';
 import { reviewEvent } from '../shared/reviewEvent';
@@ -66,5 +67,6 @@ export default function ProposalReview({ brief, requirements, proposal, original
     </section>
     <p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}
+      <CostSummary requirements={requirements} costing={contingent} names={proposal.heads.map(head=>head.name)}/>
   </main>;
 }

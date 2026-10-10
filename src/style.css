@@ -50,3 +50,23 @@ select:focus-visible, summary:focus-visible { outline: 2px solid #1e4fa3; outlin
 
 .proposal-total:has(+ .per-guest) { margin-bottom: 4px; }
 .per-guest { color: #a52c25; font-size: 14px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+/* Keep all four summary columns visible, including inside the phone review layout. */
+table.cost-summary { display:table; width:100%; table-layout:fixed; margin:16px 0; font-size:14px; }
+.cost-summary col:nth-child(1) { width:34%; }
+.cost-summary col:nth-child(2) { width:29%; }
+.cost-summary col:nth-child(3) { width:22%; }
+.cost-summary col:nth-child(4) { width:15%; }
+.cost-summary thead { display:table-header-group; position:static; width:auto; height:auto; overflow:visible; clip-path:none; }
+.cost-summary tbody { display:table-row-group; }
+.cost-summary tfoot { display:table-footer-group; font-weight:800; }
+.cost-summary tr { display:table-row; padding:0; }
+.cost-summary th, .cost-summary td { display:table-cell; width:auto; min-width:0; padding:10px 8px; white-space:normal; overflow-wrap:anywhere; vertical-align:top; font-variant-numeric:tabular-nums; }
+.cost-summary th:first-child { width:auto; min-width:0; text-align:left; }
+.cost-summary th:nth-child(4) { width:auto; }
+.cost-summary td, .cost-summary thead th:not(:first-child) { text-align:right; }
+.cost-summary td::before { content:none; }
+@media(max-width:600px) {
+  table.cost-summary { font-size:11px; }
+  .cost-summary th, .cost-summary td { padding:8px 3px; }
+}

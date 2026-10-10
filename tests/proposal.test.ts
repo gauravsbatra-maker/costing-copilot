@@ -1,4 +1,4 @@
-import {perGuestLine,midpointShares} from '../shared/costDisplay.ts';
+import {costSummary,perGuestLine,midpointShares} from '../shared/costDisplay.ts';
 import {dailyHeadcountOptions} from '../shared/reviewChoices.ts';
 import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
 import { nightlyRooms, totalRoomNights, roomsFromBrief } from '../shared/roomNights.ts';
@@ -408,5 +408,20 @@ test('head midpoint shares round to one decimal and add to 100.0%, without chang
  assert.deepEqual(midpointShares(costing),{A:'33.4% of total',B:'33.3% of total',C:'33.3% of total',Unquoted:'0.0% of total'});
  assert.equal(Object.values(midpointShares(costing)).reduce((sum,text)=>sum+Math.round(parseFloat(text)*10),0),1000);
  assert.deepEqual(midpointShares(null),{});
+ assert.deepEqual(costing,before);
+});
+
+test('cost summary uses existing head order, shares and rounded midpoint figures with an unchanged total',()=>{
+ const r=requirements();
+ const h=(midpoint:number|null)=>({percentage:0,reason:'',reserve:null,range:midpoint===null?null:{low:midpoint,high:midpoint,midpoint}});
+ const costing={total:{low:84676850,high:84676850,midpoint:84676850},heads:{A:h(84676849.6),B:h(.4),C:h(null)}};
+ const before=structuredClone(costing);
+ const rows=costSummary(r,costing,['B','A','C']);
+ assert.deepEqual(rows.map(row=>row.name),['B','A','C','Total']);
+ assert.equal(rows[0].mean,'₹0');
+ assert.deepEqual(rows[2],{name:'C',mean:'To quote',perGuest:'—',share:'0.0%'});
+ assert.deepEqual(rows[3],{name:'Total',mean:'₹8,46,76,850',perGuest:'₹84,677',share:'100.0%'});
+ assert(perGuestLine(r,costing)!.includes(`midpoint ${rows[3].perGuest}`));
+ r.functions=[];assert.equal(costSummary(r,costing,['A'])[0].perGuest,'—');
  assert.deepEqual(costing,before);
 });

@@ -5,12 +5,26 @@ import { mealKind, numberIn, rupees } from './proposal.ts';
 // Presentation only: never write rounded display figures back into the costing.
 export function perGuestLine(requirements:Requirements, costing:ContingencyResult|null):string|null {
   if(!costing)return null;
+  const guests=displayGuestCount(requirements), total=costing.total;
+  if(guests===null)return null;
+  return `(≈ ${rupees(Math.round(total.low/guests))}–${rupees(Math.round(total.high/guests))} per guest · midpoint ${rupees(Math.round(total.midpoint/guests))} · on ${guests.toLocaleString('en-IN')} guests)`;
+}
+
+export function displayGuestCount(requirements:Requirements):number|null {
   const dinners=requirements.functions.filter(f=>mealKind(f.name.value)==='dinner');
   const functions=dinners.length ? dinners : requirements.functions.filter(f=>mealKind(f.name.value)==='lunch');
   const counts=functions.map(f=>numberIn(f.guests.value)).filter((n):n is number=>n!==null);
-  if(!counts.length)return null;
-  const guests=Math.max(...counts), total=costing.total;
-  return `(≈ ${rupees(Math.round(total.low/guests))}–${rupees(Math.round(total.high/guests))} per guest · midpoint ${rupees(Math.round(total.midpoint/guests))} · on ${guests.toLocaleString('en-IN')} guests)`;
+  return counts.length ? Math.max(...counts) : null;
+}
+
+export function costSummary(requirements:Requirements,costing:ContingencyResult,names:string[]) {
+  const guests=displayGuestCount(requirements),shares=midpointShares(costing);
+  const figures=(midpoint:number|null)=>({
+    mean:midpoint===null ? 'To quote' : rupees(Math.round(midpoint)),
+    perGuest:midpoint===null || guests===null ? '—' : rupees(Math.round(midpoint/guests)),
+  });
+  return [...names.map(name=>({name,...figures(costing.heads[name]?.range?.midpoint??null),share:shares[name]?.replace('% of total','%')??'0.0%'})),
+    {name:'Total',...figures(costing.total.midpoint),share:'100.0%'}];
 }
 
 // Allocate rounding tenths to the largest remainders so the displayed shares sum to 100.0%.
