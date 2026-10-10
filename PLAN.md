@@ -113,5 +113,11 @@
 - All 55 code tests, 15 browser tests and the build passed; the final form-city adjustment also passed the targeted browser check. Tests verify identical submitted text and costs across both entry methods, blank download and both pricing-status states on both screens. Initial new-test issues with request decoding and visible whitespace were corrected.
 - Chrome verified the wedding form with a fresh AI read against the existing reviewed pasted costing and original sheet: unchanged midpoint, same excluded lines and no phone overflow. Real inputs remain outside the repo.
 - User authorized commit and push with data-file exclusions. No deployment requested.
+## Current follow-up — optional three-column client brief form
+- Replace the old form with the requested sections and repeatable room, transfer, function and service rows. Every input starts empty; hints are placeholders and typing stays in column three. Download a blank printable three-column HTML sheet.
+- Map stated room nights, daily transfer pax and function guests directly into the existing confirmation inputs. Keep room rate, benchmark, season increase and scaling rules on confirmation; the paste reader stays unchanged. Blank count rows remain absent, and blank city can proceed as City not confirmed.
+- Preserve service instructions as display-only notes beside their matching head on both proposal screens and in saved requirements. Notes never supply prices or scaling rules.
+- All 56 code tests, 16 browser tests and the build passed. Tests cover blank defaults, mapping, omitted rows, download, extra rows, service-note isolation, equivalent pasted totals and a mostly blank costing with no browser errors. Chrome verified equal wedding form/paste totals using the existing confirmation fields and no phone overflow.
+- User authorized commit and push with data-file exclusions. No deployment requested.
 ## Parked
 None.

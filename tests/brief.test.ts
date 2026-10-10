@@ -1,4 +1,4 @@
-import {briefFromForm,emptyBriefForm,blankBriefForm} from '../shared/briefForm.ts';
+import {emptyFormLayout,printableBlankBrief,requirementsFromForm,layoutBriefText} from '../shared/briefFormLayout.ts';
 import { reviewEvent } from '../shared/reviewEvent.ts';
 import { selectedEventCity } from '../shared/eventCity.ts';
 import { test } from 'node:test';
@@ -137,15 +137,21 @@ test('review event uses the current brief type and reviewed duration, and flags 
  assert.equal(reviewEvent('Use the previous wedding as benchmark. Birthday brief for the current event.',days).type,'Birthday');
 });
 
-test('brief form makes plain equivalent text without supplying missing information or invented numbers',()=>{
- const draft=emptyBriefForm();assert.equal(briefFromForm(draft),'');
- draft.eventType='Wedding';draft.dates='14–15 Feb · 2 days';draft.city='Jaipur';
- draft.functions=[{day:'Day 1',name:'Dinner',guests:'1,000'},{day:'Day 2',name:'Lunch',guests:'250'}];
- draft.services='40 rooms · 2 nights · ₹35,000/room night\nDecor: fixed setup';
- const before=structuredClone(draft);
- assert.equal(briefFromForm(draft),'Event type: Wedding\nDates: 14–15 Feb · 2 days\nCity: Jaipur\nDay 1 · Dinner · 1,000 guests\nDay 2 · Lunch · 250 guests\nServices mentioned:\n40 rooms · 2 nights · ₹35,000/room night\nDecor: fixed setup');
- assert.deepEqual(draft,before);
- assert(blankBriefForm.includes('Event type:'));
- assert(blankBriefForm.split('\n').length<30);
- assert(!blankBriefForm.includes('35,000'));
+test('form maps only stated counts and keeps instructions out of pricing fields',()=>{
+ const draft=emptyFormLayout();assert.equal(layoutBriefText(draft),'');
+ const blank=requirementsFromForm(draft);assert.deepEqual(blank.functions,[]);assert.deepEqual(blank.roomNights,[]);assert.equal(blank.fields.outOfTownGuests.status,'missing');
+ draft.eventType='Wedding';draft.dates='2 days';draft.rooms=['30','','40'];draft.transfers=['60','','15'];draft.food[0][2].guests='1000';draft.services[0].note='₹99 per guest; seasonal +90%; fixed setup';
+ const before=structuredClone(draft),r=requirementsFromForm(draft);
+ assert.deepEqual(r.roomNights?.map(f=>f.value),['30','40']);assert.equal(r.fields.outOfTownGuests.value,'75');assert.equal(r.functions.length,1);assert.equal(r.functions[0].name.value,'Dinner');assert.equal(r.functions[0].guests.value,'1000');assert.equal(r.fields.roomRate.status,'missing');assert.equal(r.fields.seasonalPremium.status,'missing');assert.equal(r.fields.benchmarkHeadcount.status,'missing');assert.deepEqual(r.scalingRules,[]);assert.deepEqual(r.serviceNotes,[{name:'Décor',text:draft.services[0].note}]);assert.deepEqual(draft,before);
+});
+
+test('three-column form starts with empty optional inputs and downloads a blank printable layout',()=>{
+ const form=emptyFormLayout();
+ assert.equal(form.eventType,'');assert.equal(form.dates,'');assert.equal(form.city,'');
+ assert.deepEqual(form.rooms,['']);assert.deepEqual(form.transfers,['']);
+ assert.deepEqual(form.food[0].map(row=>row.guests),['','','','']);
+ assert(form.services.every(row=>row.note===''));
+ assert.match(printableBlankBrief,/<th>Section<\/th><th>Row<\/th><th>Your details<\/th>/);
+ assert.equal((printableBlankBrief.match(/<td><\/td><\/tr>/g)??[]).length,16);
+ assert(!printableBlankBrief.includes('<input'));
 });

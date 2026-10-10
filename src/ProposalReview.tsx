@@ -1,3 +1,4 @@
+import {notesForHead} from '../shared/briefFormLayout';
 import PricingStatus from './PricingStatus';
 import CostSummary from './CostSummary';
 import {perGuestLine,midpointShares} from '../shared/costDisplay';
@@ -33,7 +34,7 @@ export default function ProposalReview({ brief, requirements, proposal, original
     <button className="add-detail" type="button" onClick={onBack}>Back to edit</button>
     <section aria-labelledby="review-scope"><h2 id="review-scope">Scope</h2>
       <p>Event: {event.label}</p>
-      <p>City: {value(requirements.fields.city.value)}</p>
+      <p>City: {requirements.fromBriefForm && !requirements.fields.city.value.trim()?'City not confirmed':value(requirements.fields.city.value)}</p>
       <p>Dates: {value(requirements.fields.dates.value)}</p>
       <h3>Confirmed functions</h3>
       {requirements.functions.length ? <ul>{requirements.functions.map((f,i)=><li key={i}>{value(f.day.value)} · {value(f.name.value)} · Guests: {value(f.guests.value)}</li>)}</ul> : <p>No confirmed functions recorded.</p>}
@@ -57,7 +58,7 @@ export default function ProposalReview({ brief, requirements, proposal, original
           const sources=[...new Set(head.lines.map(line=>line.source ?? `${line.label}: no matching sheet row`))];
           const percent=(rate:number|null|undefined)=>rate===null || rate===undefined ? 'Missing or invalid' : `${rate}%`;
           return <tr key={head.name}>
-            <th scope="row">{costLabel(head.name)}{changed&&<small>Edited by you</small>}</th>
+            <th scope="row">{costLabel(head.name)}{notesForHead(requirements,{heads:proposal.heads},head.name).map((note,i)=><small className="service-note" key={i}>{note}</small>)}{changed&&<small>Edited by you</small>}</th>
             <td data-label="Range">{contingent ? range ? `${rupees(range.low)}–${rupees(range.high)}` : 'To quote' : 'Check contingency percentage'}{shares[head.name]&&<small className="head-share">{shares[head.name]}</small>}</td>
             <td data-label="Midpoint">{range ? rupees(range.midpoint) : 'To quote'}</td>
             <td data-label="Source row">{sources.map(source=><span className="review-source" key={source}>{source.startsWith('Client brief') && head.lines.some(line=>line.source===source && costLabel(line.label)==='Guest rooms') && <><strong>Guest rooms</strong><br/></>}{source}</span>)}</td>

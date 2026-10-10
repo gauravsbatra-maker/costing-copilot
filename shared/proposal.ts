@@ -36,7 +36,7 @@ export function readProposalSheet(data: ArrayBuffer | Uint8Array): Budget {
   }
   return budget;
 }
-export function mapHead(name: string, budget: Budget): CostHead | null {
+export function mapHead<T extends {name:string}>(name: string, budget: {heads:T[]}): T | null {
   const exact = budget.heads.find(h => clean(h.name) === clean(name)); if (exact) return exact;
   const aliases: [RegExp, RegExp][] = [
     [/^(food|catering|meals|fb|fbandalcohol|foodandalcohol)$/, /taj hotel|food|catering/i], [/^(production|technicals|sound|lighting)$/, /technical|production/i],
@@ -117,6 +117,8 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
         ? price(head.name, head, head, headcount !== null ? headcount / pastTransferGuests! * applyPremium : null, headcount, calculation, headcount!, pastTransferGuests!)
         : quote(head.name, 'Guests the past transfers covered is missing or invalid. Enter a positive whole guest count.', headcount);
       lines = [{ ...line, source: `Overall WIP · ${head.name} · row ${head.row}`, original: head }];
+    } else if (head.row === food?.row && requirements.fromBriefForm && !requirements.functions.length) {
+      lines = [quote(head.name, 'No function guest counts stated in the client brief form.')];
     } else if (head.row === food?.row && requirements.functions.length) {
       lines = requirements.functions.map((f, i) => {
         const label = `${f.day.value} · ${/high\s*tea.*ceremon/i.test(f.name.value) ? 'High tea (food only)' : f.name.value}`;

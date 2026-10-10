@@ -7,6 +7,8 @@ export const fieldLabels = {
 export type FieldKey = keyof typeof fieldLabels;
 export type BriefField = { value: string; status: 'provided' | 'missing' | 'unclear' | 'corrected'; source: string; reason: string };
 export type Requirements = {
+  fromBriefForm?: boolean;
+  serviceNotes?: { name: string; text: string }[];
   roomNights?: BriefField[];
   fields: Record<FieldKey, BriefField>;
   functions: { day: BriefField; name: BriefField; guests: BriefField }[];

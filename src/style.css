@@ -83,3 +83,25 @@ table.cost-summary { display:table; width:100%; table-layout:fixed; margin:16px 
 .brief-tabs [aria-selected="true"] { border-bottom:3px solid #285d45; color:#285d45; }
 
 .brief-entry.form-entry { grid-template-columns: minmax(0,1fr); }
+
+.brief-form-layout { width:100%; table-layout:fixed; font-size:13px; }
+.brief-form-layout col:nth-child(1) { width:22%; }
+.brief-form-layout col:nth-child(2) { width:27%; }
+.brief-form-layout col:nth-child(3) { width:51%; }
+.brief-form-layout th, .brief-form-layout td { min-width:0; width:auto; padding:10px 8px; text-align:left; white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
+.brief-form-layout th:first-child { min-width:0; width:auto; }
+.brief-form-layout input, .brief-form-layout textarea { width:100%; min-width:0; padding:9px; font:inherit; border:1px solid #b8c8bc; border-radius:6px; background:white; color:inherit; }
+.brief-form-layout input::placeholder, .brief-form-layout textarea::placeholder { color:#66766c; opacity:1; }
+.form-count { display:flex; align-items:center; gap:6px; }
+.form-count input { flex:1; width:0; }
+.service-note-input { display:flex; align-items:center; gap:8px; }
+.service-note-input textarea { flex:1; width:0; }
+.service-note-input small { flex:0 1 65px; margin:0; }
+@media(max-width:600px) {
+ .brief-form-layout { font-size:12px; }
+ .brief-form-layout th, .brief-form-layout td { padding:8px 3px; }
+ .brief-form-layout input, .brief-form-layout textarea { padding:7px 4px; font-size:16px; }
+ .service-note-input { flex-wrap:wrap; }
+ .service-note-input textarea { flex-basis:100%; }
+ .service-note-input small { flex-basis:auto; }
+}
