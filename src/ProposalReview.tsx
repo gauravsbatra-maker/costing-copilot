@@ -56,7 +56,7 @@ export default function ProposalReview({ brief, requirements, proposal, original
             <th scope="row">{costLabel(head.name)}{changed&&<small>Edited by you</small>}</th>
             <td data-label="Range">{contingent ? range ? `${rupees(range.low)}–${rupees(range.high)}` : 'To quote' : 'Check contingency percentage'}</td>
             <td data-label="Midpoint">{range ? rupees(range.midpoint) : 'To quote'}</td>
-            <td data-label="Source row">{sources.map(source=><span className="review-source" key={source}>{source.startsWith('Client brief') && head.lines.some(line=>line.source===source && costLabel(line.label)==='Guest rooms') && <><strong>Guest rooms</strong><br/></>}{costText(source,proposal.heads.map(h=>h.name))}</span>)}</td>
+            <td data-label="Source row">{sources.map(source=><span className="review-source" key={source}>{source.startsWith('Client brief') && head.lines.some(line=>line.source===source && costLabel(line.label)==='Guest rooms') && <><strong>Guest rooms</strong><br/></>}{source}</span>)}</td>
             <td data-label="Contingency %">{uniform ? percent(rates[0]) : head.lines.map((line,i)=><span className="review-source" key={i}>{costLabel(line.label)}: {percent(rates[i])}</span>)}</td>
           </tr>;
         })}</tbody>

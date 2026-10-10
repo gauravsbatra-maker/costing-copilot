@@ -5,7 +5,7 @@ import { costLabel } from './displayLabels.ts';
 
 const displayMatches=(name:string,budget:Budget)=>{
   const normalize=(text:string)=>text.toLowerCase().replace(/[^a-z0-9]/g,'');
-  const display=budget.heads.find(h=>normalize(costLabel(h.name))===normalize(name));
+  const display=budget.heads.find(h=>normalize(costLabel(h.name))===normalize(costLabel(name)));
   return display ? [display] : mappedHeads(name,budget);
 };
 

@@ -15,8 +15,8 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
  await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
- await expect(page.getByLabel('Cost head 1',{exact:true})).toHaveValue('Food & beverage (minimum guarantee)');
- await expect(page.getByRole('button',{name:'Enter a rule for Food & beverage (minimum guarantee)',exact:true})).toHaveCount(0);
+ await expect(page.getByLabel('Cost head 1',{exact:true})).toHaveValue('Food & beverage');
+ await expect(page.getByRole('button',{name:'Enter a rule for Food & beverage',exact:true})).toHaveCount(0);
  const cost=page.getByRole('button',{name:'Cost it',exact:true});await expect(cost).toBeDisabled();
  await expect(page.getByLabel('Headcount driving Guests Transfer (Toyota Crysta)',{exact:true})).toHaveValue('Out-of-town guests: 75');
  await expect(page.getByLabel('Headcount driving Technicals',{exact:true})).toHaveValue('Dinner: 1000');
@@ -28,7 +28,7 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  await expect(page.getByRole('region',{name:'Costed proposal',exact:true})).toContainText('midpoint');
  await expect(page.getByText('Raw proposal output',{exact:true})).toHaveCount(0);
  const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
- for(const head of heads)await expect(proposal.getByLabel(`Contingency % for ${head==='Taj Hotel Expenses'?'Food & beverage (minimum guarantee)':head}`,{exact:true})).toHaveValue(head==='Guests Transfer (Toyota Crysta)'?'10':'0');
+ for(const head of heads)await expect(proposal.getByLabel(`Contingency % for ${head==='Taj Hotel Expenses'?'Food & beverage':head}`,{exact:true})).toHaveValue(head==='Guests Transfer (Toyota Crysta)'?'10':'0');
  const checks=proposal.getByRole('region',{name:'Check before you send',exact:true});
  await expect(checks).toBeVisible();
  expect(await checks.getByRole('heading',{level:4}).allTextContents()).toEqual(['Missing information','Uncertain costs','Assumptions and choices']);
@@ -92,7 +92,7 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  await page.getByLabel('Function 2 guest count',{exact:true}).fill('999');
  for(const h of heads)await page.getByLabel(`Choose a function for ${costLabel(h)}`,{exact:true}).selectOption('Dinner: 1000');
  await page.getByLabel('I confirm the requirements and matching rows.').check(); await expect(cost).toBeEnabled();await cost.click();
- const raw=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(raw).toContainText('Day 1 · High tea · ₹1,125–₹1,375 · midpoint ₹1,250');await expect(raw).toContainText('Overall WIP · Food & beverage (minimum guarantee) · row 4');await expect(raw).toContainText('Guest rooms · ₹25,20,000–₹30,80,000');await expect(raw).toContainText('Day 1 · After party · To quote');
+ const raw=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(raw).toContainText('Day 1 · High tea · ₹1,125–₹1,375 · midpoint ₹1,250');await expect(raw).toContainText('Overall WIP · Taj Hotel Expenses · row 4');await expect(raw).toContainText('Guest rooms · ₹25,20,000–₹30,80,000');await expect(raw).toContainText('Day 1 · After party · To quote');
  await page.getByLabel('Calculation for Decor',{exact:true}).selectOption('headcount'); await expect(raw).toHaveCount(0);await cost.click();await expect(raw).toBeVisible();
  await page.getByLabel('Use my reviewed brief’s rooms, room rate and nights. No further season increase on this quoted rate.').check(); await cost.click(); await expect(raw).toContainText('Client brief · rooms, room rate and nights · confirmed by project head');
  // Missing variance must ask instead of silently using the previous brief’s percentage.

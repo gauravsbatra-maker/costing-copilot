@@ -83,5 +83,9 @@
 - Accept the selected day total as a headcount without changing rates, cost bases, source rows or other heads. Missing function counts disable that day's total rather than guessing.
 - All 50 code tests, 14 browser tests and the build passed. The existing saved-costing sign-in test timed out once and passed on a full rerun without changes. Chrome checked the wedding functions, both daily totals, dinner default and unchanged pre-GST total with 60 past-transfer guests.
 - User approved committing and pushing the day-total headcount option with data-file exclusions. No deployment requested.
+## Current follow-up — shorter food and beverage label
+- Display Food & beverage throughout review, headcount choices, costs and saved snapshots, including the old display-name alias. Show original sheet wording in source references; preserve underlying names and every number.
+- All 50 code tests, 14 browser tests and the build passed. Chrome verified saving and reopening the wedding costing, review at phone width and unchanged midpoint. Searching the built app for the old wording returned no matches.
+- User authorized commit and push with data-file exclusions. No deployment requested.
 ## Parked
 None.

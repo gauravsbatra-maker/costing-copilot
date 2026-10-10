@@ -14,7 +14,7 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
 
- await expect(page.getByLabel('Headcount driving Food & beverage (minimum guarantee)',{exact:true})).toBeVisible();
+ await expect(page.getByLabel('Headcount driving Food & beverage',{exact:true})).toBeVisible();
  await expect(page.getByLabel(/Headcount driving Taj/)).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Sign in',exact:true})).toHaveCount(0);
  await page.getByLabel('Event city',{exact:true}).fill('Jaipur');
@@ -61,7 +61,7 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await expect(page.getByLabel('Guests the past transfers covered',{exact:true})).toHaveValue('60');
  await expect(page.getByLabel('Event city',{exact:true})).toHaveValue('Jaipur');
  await expect(proposal.getByLabel('Contingency % for Guests Transfer (Toyota Crysta)',{exact:true})).toHaveValue('20');
- await expect(page.getByLabel('Headcount driving Food & beverage (minimum guarantee)',{exact:true})).toBeVisible();
+ await expect(page.getByLabel('Headcount driving Food & beverage',{exact:true})).toBeVisible();
  await expect(page.getByLabel(/Headcount driving Taj/)).toHaveCount(0);
  expect(reads).toBe(1);
  await page.getByRole('button',{name:'Sign out',exact:true}).click();

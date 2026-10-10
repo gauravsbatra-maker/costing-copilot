@@ -37,11 +37,11 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  await page.getByRole('button',{name:'Cost it',exact:true}).click();
  await proposal.getByLabel('Contingency % for Guests Transfer (Toyota Crysta)',{exact:true}).fill('20');
  const total=await proposal.locator('.proposal-total').innerText();
- await expect(proposal.getByRole('heading',{name:/^Food & beverage \(minimum guarantee\) ·/})).toBeVisible();
+ await expect(proposal.getByRole('heading',{name:/^Food & beverage ·/})).toBeVisible();
  await expect(proposal.getByRole('heading').filter({hasText:/Taj|Hotel/i})).toHaveCount(0);
  await expect(proposal.getByText(/^Guest rooms · ₹/)).toBeVisible();
- await expect(proposal.getByText('Overall WIP · Food & beverage (minimum guarantee) · row 4',{exact:true})).toHaveCount(2);
- for(const source of await proposal.getByText('Overall WIP · Food & beverage (minimum guarantee) · row 4',{exact:true}).all())await expect(source).toBeVisible();
+ await expect(proposal.getByText('Overall WIP · Taj Hotel Expenses · row 4',{exact:true})).toHaveCount(2);
+ for(const source of await proposal.getByText('Overall WIP · Taj Hotel Expenses · row 4',{exact:true}).all())await expect(source).toBeVisible();
  const headPrices=await proposal.locator('.proposal-head > h3').allTextContents();
  const checks=proposal.getByRole('region',{name:'Check before you send',exact:true});
  const lists=await checks.locator(':scope > ul').allTextContents();
@@ -66,16 +66,16 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  const table=review.getByRole('table',{name:'Reviewed costs',exact:true});
  await expect(table.getByRole('row')).toHaveCount(11);
  for(const [i,originalHead] of heads.entries()){
-  const head=originalHead==='Taj Hotel Expenses'?'Food & beverage (minimum guarantee)':originalHead;
+  const head=originalHead==='Taj Hotel Expenses'?'Food & beverage':originalHead;
   const row=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:head,exact:i!==2})});
   await expect(row).toHaveCount(1);
   const figure=headPrices[i].slice(head.length+3).split(' · midpoint ');
   await expect(row).toContainText(figure[0]);await expect(row).toContainText(figure[1]);
  }
- await expect(table.getByRole('rowheader',{name:'Food & beverage (minimum guarantee)',exact:true})).toBeVisible();
+ await expect(table.getByRole('rowheader',{name:'Food & beverage',exact:true})).toBeVisible();
  await expect(table.getByText('Guest rooms',{exact:true})).toBeVisible();
  await expect(table.getByRole('rowheader').filter({hasText:/Taj|Hotel/i})).toHaveCount(0);
- await expect(table.getByText('Overall WIP · Food & beverage (minimum guarantee) · row 4',{exact:true})).toBeVisible();
+ await expect(table.getByText('Overall WIP · Taj Hotel Expenses · row 4',{exact:true})).toBeVisible();
  const transfers=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:/^Guests Transfer/})});
  await expect(transfers).toContainText('Edited by you');await expect(transfers).toContainText('20%');
  await expect(transfers).toContainText('Overall WIP · Guests Transfer (Toyota Crysta) · row 8');

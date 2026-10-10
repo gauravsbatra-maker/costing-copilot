@@ -316,13 +316,15 @@ test('line edits preserve seasonal and room factors, source rows, other lines, a
 
 test('proposal display labels remove the past hotel and name guest rooms in every display context while retaining source data and other labels', () => {
  const old='Taj Hotel Expenses ( minimum gaurentee)';
- assert.equal(costLabel(old),'Food & beverage (minimum guarantee)');
+ assert.equal(costLabel(old),'Food & beverage');
+ assert.equal(costLabel('Food & beverage (minimum guarantee)'),'Food & beverage');
+ assert.equal(costText('Food & beverage (minimum guarantee) — saved choice',[old]),'Food & beverage — saved choice');
  assert.equal(costLabel('Accommodation · rooms and nights'),'Guest rooms');
  for(const label of ['Other Costs','Decor','Guests Transfer (Toyota Crysta)','Day 1 · Lunch'])assert.equal(costLabel(label),label);
  const source=`Overall WIP · ${old} · row 5`;
- assert.equal(costText(source,[old]),'Overall WIP · Food & beverage (minimum guarantee) · row 5');
+ assert.equal(costText(source,[old]),source);
  assert.equal(source,`Overall WIP · ${old} · row 5`);
- assert.equal(costText(`${old} — meal row: ${source}`,[old]),'Food & beverage (minimum guarantee) — meal row: Overall WIP · Food & beverage (minimum guarantee) · row 5');
+ assert.equal(costText(`${old} — meal row: ${source}`,[old]),`Food & beverage — meal row: ${source}`);
 });
 
 test('per-night room counts price 70 room nights at the quoted rate, preserve other heads and support old stays',()=>{
@@ -357,17 +359,17 @@ test('review merges brief food aliases and empty sheet duplicates without changi
  const before=buildProposal(budget,r,{}, {}, {},true,60);
  const original=structuredClone(r);
  const rows=scalingRuleReview(r,budget);
- assert.equal(rows[0].label,'Food & beverage (minimum guarantee)');
+ assert.equal(rows[0].label,'Food & beverage');
  assert(hasScalingRule(head.name,r,budget));
  assert.deepEqual(r,original);
  r.scalingRules.push({head:{value:head.name,status:'corrected',source:'',reason:''},rule:{value:'',status:'missing',source:'',reason:''}});
  const duplicated=structuredClone(r);
- assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage (minimum guarantee)').length,1);
+ assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage').length,1);
  assert.equal(scalingRuleReview(r,budget)[0].row.rule.value,original.scalingRules[0].rule.value);
  assert.deepEqual(r,duplicated);
  assert.deepEqual(buildProposal(budget,r,{}, {}, {},true,60),before);
- r.scalingRules[r.scalingRules.length-1].head.value='Food & beverage (minimum guarantee)';
- assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage (minimum guarantee)').length,1);
+ r.scalingRules[r.scalingRules.length-1].head.value='Food & beverage';
+ assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage').length,1);
 });
 
 test('function headcount defaults to dinner, falls back to lunch and day totals include every function',()=>{
