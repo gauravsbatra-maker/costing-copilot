@@ -87,5 +87,9 @@
 - Display Food & beverage throughout review, headcount choices, costs and saved snapshots, including the old display-name alias. Show original sheet wording in source references; preserve underlying names and every number.
 - All 50 code tests, 14 browser tests and the build passed. Chrome verified saving and reopening the wedding costing, review at phone width and unchanged midpoint. Searching the built app for the old wording returned no matches.
 - User authorized commit and push with data-file exclusions. No deployment requested.
+## Current follow-up — saved times and private deletion
+- Display the existing creation date and local time under each saved label, retaining newest-first order and older saves without a migration. Add Delete with an explicit confirmation before removing the selected saved record.
+- The server requires sign-in and checks the record owner. Code tests verify anonymous and other-user deletion are rejected and another saved record remains intact. Chrome tests verify cancel, confirm, persistence after reload and reopening the remaining costing.
+- All 50 code tests, 14 browser tests and the build passed; development Convex functions updated cleanly. User authorized commit and push with data-file exclusions. No production deployment requested.
 ## Parked
 None.

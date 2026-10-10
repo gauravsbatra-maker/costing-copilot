@@ -15,6 +15,17 @@ test('saved costings are private to their owner, including direct links',async()
  expect(await b.query(api.costings.list,{})).toEqual([]);
  expect(await b.query(api.costings.get,{id})).toBeNull();
  expect(await t.query(api.costings.get,{id})).toBeNull();
+ const second=await a.mutation(api.costings.save,{snapshot});
+ const listed=await a.query(api.costings.list,{});
+ expect(listed.map(row=>row.id)).toEqual([second,id]);
+ expect(listed[0].savedAt).toBeTypeOf('number');
+ await expect(t.mutation(api.costings.remove,{id})).rejects.toThrow('Sign in');
+ await expect(b.mutation(api.costings.remove,{id})).rejects.toThrow('not found');
+ expect(await a.query(api.costings.get,{id})).toBe(snapshot);
+ await a.mutation(api.costings.remove,{id});
+ expect(await a.query(api.costings.get,{id})).toBeNull();
+ expect((await a.query(api.costings.list,{})).map(row=>row.id)).toEqual([second]);
+ expect(await a.query(api.costings.get,{id:second})).toBe(snapshot);
  await expect(a.mutation(api.costings.save,{snapshot:JSON.stringify({...JSON.parse(snapshot),workbook:'bytes'})})).rejects.toThrow('incomplete');
 });
 
