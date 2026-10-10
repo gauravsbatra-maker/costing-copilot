@@ -32,7 +32,7 @@ export default function ProposalReview({ brief, requirements, proposal, original
   return <main className="proposal-review" aria-label="Proposal review">
     <h1 tabIndex={-1}>Review proposal</h1>
     <button className="add-detail" type="button" onClick={onBack}>Back to edit</button>
-    <section aria-labelledby="review-scope"><h2 id="review-scope">Scope</h2>
+    <div className="invoice-layout"><div className="invoice-items"><section aria-labelledby="review-scope"><h2 id="review-scope">Scope</h2>
       <p>Event: {event.label}</p>
       <p>City: {requirements.fromBriefForm && !requirements.fields.city.value.trim()?'City not confirmed':value(requirements.fields.city.value)}</p>
       <p>Dates: {value(requirements.fields.dates.value)}</p>
@@ -67,8 +67,9 @@ export default function ProposalReview({ brief, requirements, proposal, original
         })}</tbody>
       </table>
     </section>
-    <div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
+    </div><aside className="invoice-summary"><div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}</div><PricingStatus proposal={proposal}/></div>
       <CostSummary requirements={requirements} costing={contingent} names={proposal.heads.map(head=>head.name)}/>
+    </aside></div>
   </main>;
 }

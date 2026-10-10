@@ -119,5 +119,11 @@
 - Preserve service instructions as display-only notes beside their matching head on both proposal screens and in saved requirements. Notes never supply prices or scaling rules.
 - All 56 code tests, 16 browser tests and the build passed. Tests cover blank defaults, mapping, omitted rows, download, extra rows, service-note isolation, equivalent pasted totals and a mostly blank costing with no browser errors. Chrome verified equal wedding form/paste totals using the existing confirmation fields and no phone overflow.
 - User authorized commit and push with data-file exclusions. No deployment requested.
+## Current follow-up — DESIGN.md working screens
+- Apply the approved limewash and linen-pastel palette, Bodoni Moda titles and Jost body text across brief entry, sheet readback, requirement review, costed and read-only proposals, saved costings and account screens. Preserve every label and existing control.
+- Use a desktop invoice layout with existing line items on the left and the current live total, summary and save action on the right. Stack those regions on phones. Promote the existing main action for the current stage through styling only.
+- Preserve all pricing, sources, state and flows. Update only the existing test's old per-guest red expectation to DESIGN.md brick red; keep its number, persistence and phone-fit assertions intact.
+- Capture before/after desktop (1440px) and phone (390px) images outside the repo, including the form and both review views. Real client images remain outside git; saved-account captures use invented data.
+- All 56 code tests, 16 browser tests and the build passed. Chrome confirmed the unchanged wedding midpoint, immediate edit/reset totals and no phone overflow. A phone summary-cell overflow caught by the existing tests was fixed by widening that column; sheet amounts use three readable columns beneath each head on phones. User authorized commit and push with data-file exclusions; no deployment requested.
 ## Parked
 None.

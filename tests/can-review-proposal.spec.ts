@@ -44,7 +44,7 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  for(const source of await proposal.getByText('Overall WIP · Taj Hotel Expenses · row 4',{exact:true}).all())await expect(source).toBeVisible();
  const expectedPerGuest=(()=>{const values=total.match(/₹[\d,.]+/g)!.map(s=>Number(s.slice(1).replaceAll(',','')));const money=(n:number)=>'₹'+Math.round(n/1000).toLocaleString('en-IN');return `(≈ ${money(values[0])}–${money(values[1])} per guest · midpoint ${money(values[2])} · on 1,000 guests)`;})();
  await expect(proposal.locator('.proposal-total + .per-guest')).toHaveText(expectedPerGuest);
- await expect(proposal.locator('.per-guest')).toHaveCSS('color','rgb(165, 44, 37)');
+ await expect(proposal.locator('.per-guest')).toHaveCSS('color','rgb(163, 50, 42)');
  const shares=await proposal.locator('.head-share').allTextContents();
  expect(shares).toHaveLength(10);
  expect(shares.reduce((sum,text)=>sum+Math.round(parseFloat(text)*10),0)).toBe(1000);

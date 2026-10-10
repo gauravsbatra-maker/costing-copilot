@@ -99,7 +99,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full Overall WIP costing to cost this.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
     {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}<button className="add-detail" type="button" ref={reviewButton} onClick={()=>{if(checks && originalProposal) { onReview(<ProposalReview brief={brief} requirements={requirements} proposal={proposal} original={originalProposal} contingent={contingent} checks={checks} edits={lineEdits} percentages={linePercentages} defaults={contingencyDefaultsByHead} onBack={()=>{onReview(null);requestAnimationFrame(()=>reviewButton.current?.focus());}}/>); window.scrollTo(0,0); requestAnimationFrame(()=>document.querySelector<HTMLElement>('.proposal-review h1')?.focus()); }}}>Review proposal</button><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
-      {proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{costLabel(h.name)} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3>{shares[h.name]&&<small className="head-share">{shares[h.name]}</small>}{notesForHead(requirements,budget,h.name).map((note,i)=><p className="service-note" key={i}>{note}</p>)}<p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
+      <div className="invoice-layout"><div className="invoice-items">{proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{costLabel(h.name)} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3>{shares[h.name]&&<small className="head-share">{shares[h.name]}</small>}{notesForHead(requirements,budget,h.name).map((note,i)=><p className="service-note" key={i}>{note}</p>)}<p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
         const key=lineKey(h.name,i), original=originalProposal!.heads.find(head=>head.name===h.name)!.lines[i];
         const edit=lineEdits[key];
         const pct=linePercentages[key];
@@ -127,12 +127,12 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
         <h4>Assumptions and choices</h4><ul>{checks.summary.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul>
         <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul></details>
       </section>}
-      <div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
+      </div><aside className="invoice-summary"><div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}</div><PricingStatus proposal={proposal}/></div>
       <CostSummary requirements={requirements} costing={contingent} names={proposal.heads.map(head=>head.name)}/>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>
       <button className="read-brief" type="button" disabled={isSaving || !contingent || !generated} onClick={()=>{if(contingent && generated)saveCosting({version:1,brief,budget,requirements,drivers,defaults:contingencyDefaultsByHead,contingencies:linePercentages as Record<string,number>,lines:proposal,priced:contingent,state:{lineEdits,pastTransferGuestsEntry,bases,overrides,useBriefRooms,confirmed,generated,chosenVariance},total:`Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}`});}}>Save this costing</button>
-      <p>Only saved costings are kept in your account. The uploaded Excel file is never stored.</p>
+      <p>Only saved costings are kept in your account. The uploaded Excel file is never stored.</p></aside></div>
     </section>}
   </section>;
 }
