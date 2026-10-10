@@ -37,17 +37,41 @@ export function prepareReview(requirements: Requirements, brief: string): Requir
 }
 export type HeadChoice = { driver: string; basis: Basis; reason: string; basisReason: string };
 export function suggestedHeadChoices(budget: Budget, r: Requirements): Record<string, HeadChoice> {
-  const dinners = r.functions.filter(f => mealKind(f.name.value) === 'dinner');
-  const dinnerCounts = [...new Set(dinners.map(f => numberIn(f.guests.value)))];
-  const dinner = dinnerCounts.length === 1 ? dinnerCounts[0] : null;
+  const days=groupFunctionDays(r);
+  const preferred=days.flatMap(({functions})=>{
+    const dinners=functions.filter(f=>mealKind(f.name.value)==='dinner');
+    const choices=dinners.length ? dinners : functions.filter(f=>mealKind(f.name.value)==='lunch');
+    return choices.length ? choices.map(f=>({kind:dinners.length?'Dinner':'Lunch',count:numberIn(f.guests.value)})) : [{kind:'Lunch',count:null}];
+  });
+  const counts=[...new Set(preferred.map(f=>f.count))];
+  const dinner=counts.length===1 ? counts[0] : null;
+  const defaultKind=preferred.some(f=>f.kind==='Dinner') ? 'Dinner' : 'Lunch';
   const outOfTown = numberIn(r.fields.outOfTownGuests.value);
   const food = mapHead('Food', budget), transfers = mapHead('Transfers', budget);
   return Object.fromEntries(budget.heads.map(h => {
     const rule = ruleForHead(h, budget, r), basis = defaultBasis(rule);
     const transfer = h.row === transfers?.row;
-    const driver = transfer ? outOfTown === null ? '' : `Out-of-town guests: ${outOfTown}` : dinner === null ? '' : `Dinner: ${dinner}`;
-    const reason = transfer ? 'Transfers use the brief’s out-of-town guests.' : h.row === food?.row ? 'Meals use their own function count. High tea follows lunch. Alcohol uses the dinner count.' : basis === 'fixed' ? 'Fixed historical cost; this reference headcount does not scale it.' : 'Per-person costs use the dinner count.';
+    const driver = transfer ? outOfTown === null ? '' : `Out-of-town guests: ${outOfTown}` : dinner === null ? '' : `${defaultKind}: ${dinner}`;
+    const reason = transfer ? 'Transfers use the brief’s out-of-town guests.' : h.row === food?.row ? `Meals use their own function count. High tea follows lunch. Alcohol uses the ${defaultKind.toLowerCase()} count.` : basis === 'fixed' ? 'Fixed historical cost; this reference headcount does not scale it.' : `Per-person costs use the ${defaultKind.toLowerCase()} count.`;
     const basisReason = basis === 'fixed' ? `Keep the historical cost. ${rule ? `Brief rule: ${rule}.` : 'No per-person scaling rule is stated.'}` : `Scale against the historical benchmark. Brief rule: ${rule}.`;
     return [h.name, { driver, basis, reason, basisReason }];
   }));
+}
+
+export function groupFunctionDays(r: Requirements) {
+  const days=new Map<string,{day:string;functions:Requirements['functions']}>();
+  for(const f of r.functions){
+    const day=f.day.value.trim(),key=day.toLowerCase();
+    if(!days.has(key))days.set(key,{day,functions:[]});
+    days.get(key)!.functions.push(f);
+  }
+  return [...days.values()];
+}
+export function dailyHeadcountOptions(r: Requirements) {
+  return groupFunctionDays(r).filter(({day})=>day).map(({day,functions})=>{
+    const counts=functions.map(f=>f.guests.status==='unclear' ? null : numberIn(f.guests.value));
+    const sum=counts.reduce<number>((sum,n)=>sum+(n??0),0);
+    const total=counts.every(n=>n!==null) && Number.isSafeInteger(sum) ? sum : null;
+    return {day,total,value:total===null?'':`Total for the day (all functions) · ${day}: ${total}`,label:`${day} · Total for the day (all functions): ${total===null?'guest counts missing':new Intl.NumberFormat('en-IN').format(total)}`};
+  });
 }

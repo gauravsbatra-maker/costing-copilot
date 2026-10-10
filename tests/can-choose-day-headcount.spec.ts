@@ -1,0 +1,41 @@
+import {test,expect} from '@playwright/test';
+import * as XLSX from 'xlsx';
+import {validateRequirements} from '../shared/brief';
+import {detailedBrief,detailedExtraction} from './fixtures/brief';
+for(const withDinner of [true,false])test(`headcount chooser defaults to ${withDinner?'dinner':'lunch'} and offers every function's day total`,async({page})=>{
+ const brief=withDinner ? detailedBrief : detailedBrief.replaceAll('• Dinner – 1,000 pax\n','');
+ const raw=detailedExtraction();
+ if(!withDinner)raw.functions=raw.functions.filter(f=>f.name!=='Dinner');
+ const r=validateRequirements(raw,brief);
+ let reads=0;
+ await page.route('**/api/action',route=>{if(route.request().postDataJSON().path!=='brief:structure')return route.continue();reads++;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'success',value:r})});});
+ const heads=['Taj Hotel Expenses','Bar Tenders','Guests Transfer (Toyota Crysta)','Entertainment','Technicals','Decor','Licenses & Permissions','Graphic Design & Printables','Photo / Video','Other Costs'];
+ const rows:unknown[][]=[['Sr No','Description','Qty','Days','Total','Rate','Cost'],[null,null,null,null,null,null,'W/0 GST','NW','W']];
+ heads.forEach((name,i)=>{rows.push([i+1,name,null,null,null,null,1000,0,1000]);if(i===0)rows.push([null,'Oct 24 - Lunch',100,1,100,8,800,0,800],[null,'Oct 24 - Sangeet',100,1,100,2,200,0,200],[null,'Oct 25 - High Tea',100,1,100,5,500,0,500]);});
+ rows.push([null,'Total',null,null,null,null,10000,0,10000]);
+ const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
+ await page.goto('/'); await page.getByLabel('Paste the brief').fill(brief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+
+
+ const chooser=page.getByLabel('Choose a function for Technicals',{exact:true});
+ const preferred=withDinner?'Dinner: 1000':'Lunch: 250';
+ const total=withDinner?1650:650;
+ await expect(chooser).toHaveValue(preferred);
+ await expect(chooser.getByRole('option',{name:`Day 1 · Total for the day (all functions): ${total.toLocaleString('en-IN')}`,exact:true})).toHaveCount(1);
+ await expect(chooser.getByRole('option',{name:`Day 2 · Total for the day (all functions): ${total.toLocaleString('en-IN')}`,exact:true})).toHaveCount(1);
+ await page.getByLabel('Event city',{exact:true}).fill('Jaipur');
+ await page.getByLabel('Guests the past transfers covered',{exact:true}).fill('60');
+ await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ const original=await proposal.locator('.proposal-total').innerText();
+ const otherHeads=await proposal.locator('.proposal-head').evaluateAll(heads=>heads.filter(h=>!h.querySelector('h3')!.textContent!.startsWith('Technicals ·')).map(h=>h.textContent));
+ await chooser.selectOption(`Total for the day (all functions) · Day 1: ${total}`);
+ await expect(proposal).toHaveCount(0);
+ await page.getByRole('button',{name:'Cost it',exact:true}).click();
+ await expect(proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Technicals ·/})})).toContainText(`Headcount: ${total}`);
+ expect(await proposal.locator('.proposal-head').evaluateAll(heads=>heads.filter(h=>!h.querySelector('h3')!.textContent!.startsWith('Technicals ·')).map(h=>h.textContent))).toEqual(otherHeads);
+ await chooser.selectOption(preferred);
+ await page.getByRole('button',{name:'Cost it',exact:true}).click();
+ await expect(proposal.locator('.proposal-total')).toHaveText(original);
+});

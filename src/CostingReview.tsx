@@ -4,12 +4,12 @@ import { costLabel, costText } from '../shared/displayLabels';
 import ProposalReview from './ProposalReview';
 import { editProposal, applyLineContingencies, lineKey, inputNumber, type LineEdit } from '../shared/lineEdits';
 import { applyContingencies, contingencyDefaults, contingencyFigure, contingencyReason, type ContingencyChoice } from '../shared/contingency';
-import { suggestedHeadChoices } from '../shared/reviewChoices';
+import { dailyHeadcountOptions, suggestedHeadChoices } from '../shared/reviewChoices';
 import { proposalChecks } from '../shared/proposalChecks';
 import { useRef, useState, type ReactNode } from 'react';
 import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
-import { applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
+import { chosenHeadcount, applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
 export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief, initial }: { initial?: SavedCosting | null; budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
   const saveCosting = useSaveCosting();
   const reviewButton = useRef<HTMLButtonElement>(null);
@@ -49,12 +49,13 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     if (edit && l.amount===null && (edit.quantity!==undefined || edit.unitCost!==undefined)) checks.missing.push(`${h.name} — ${l.label}: enter a valid quantity and unit cost and confirm the original calculation basis.`);
 
   }
+  const dayOptions = dailyHeadcountOptions(requirements);
   const functions = requirements.functions.filter(f => mealKind(f.name.value) !== 'tea');
   const counts = new Set(functions.map(f => numberIn(f.guests.value)).filter(n=>n!==null));
   const conflict = counts.size > 1 || functions.some(f=>numberIn(f.guests.value)===null);
   const cityRequired = !requirements.fields.city.value.trim() || requirements.fields.city.status==='unclear';
   const uncertain = [...Object.entries(requirements.fields).filter(([key])=>key!=='city' && (!requirements.roomNights || (key!=='rooms' && key!=='nights'))).map(([,field])=>field), ...(requirements.roomNights ?? []), ...requirements.functions.flatMap(f=>Object.values(f)), ...requirements.scalingRules.flatMap(r=>Object.values(r))].filter(f=>f.status==='unclear').length;
-  const needed = conflict ? budget.heads.filter(h=>numberIn(drivers[h.name]??'')===null).length : 0;
+  const needed = conflict ? budget.heads.filter(h=>chosenHeadcount(drivers[h.name]??'')===null).length : 0;
   const food = mapHead('Food',budget);
   const transfers = mapHead('Transfers',budget);
   const matches = {...matchMeals(budget,requirements),...overrides};
@@ -73,7 +74,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
         <small>{bases[h.name] ? 'Your edited choice. ' : 'Pre-filled. '}{bases[h.name] ? selectedBases[h.name]==='fixed' ? 'Keep the historical cost.' : 'Scale against the historical benchmark.' : choice.basisReason}</small>
         {h.row===transfers?.row && <label className="brief-field"><span>Guests the past transfers covered</span><input aria-label="Guests the past transfers covered" type="number" min="1" step="1" value={pastTransferGuestsEntry} onChange={e=>setPastTransferGuestsEntry(e.target.value)} placeholder="Enter the past transfer guest count"/><small>Transfers use the sheet’s transfer cost × out-of-town guests ÷ this count, with the existing seasonal increase. The general cost basis above does not apply to transfers.</small>{pastTransferGuests===null && <small className="amber">Missing: enter a positive whole guest count. Transfers stay To quote until supplied.</small>}</label>}
         {h.row===food?.row && <small>Meals always use their function headcount and sheet quantity.</small>}
-        {conflict && <label>Choose a function for {costLabel(h.name)}<select aria-label={`Choose a function for ${costLabel(h.name)}`} value={drivers[h.name]??''} onChange={e=>{if(e.target.value)setDrivers({...drivers,[h.name]:e.target.value});}}><option value="">Pick a function, or enter another number above</option>{drivers[h.name] && !functions.some(f=>`${f.name.value}: ${numberIn(f.guests.value)??''}`===drivers[h.name]) && <option value={drivers[h.name]}>{drivers[h.name]}</option>}{functions.map((f,i)=><option key={i} value={`${f.name.value}: ${numberIn(f.guests.value)??''}`}>{f.day.value} · {f.name.value} · {f.guests.value}</option>)}</select><small>Selected: {drivers[h.name]||'None'}. {drivers[h.name]===choice.driver ? choice.reason : 'Your edited headcount.'}</small></label>}
+        {conflict && <label>Choose a function for {costLabel(h.name)}<select aria-label={`Choose a function for ${costLabel(h.name)}`} value={drivers[h.name]??''} onChange={e=>{if(e.target.value)setDrivers({...drivers,[h.name]:e.target.value});}}><option value="">Pick a function, or enter another number above</option>{drivers[h.name] && !functions.some(f=>`${f.name.value}: ${numberIn(f.guests.value)??''}`===drivers[h.name]) && !dayOptions.some(day=>day.value===drivers[h.name]) && <option value={drivers[h.name]}>{drivers[h.name]}</option>}{functions.map((f,i)=><option key={i} value={`${f.name.value}: ${numberIn(f.guests.value)??''}`}>{f.day.value} · {f.name.value} · {f.guests.value}</option>)}{dayOptions.map(day=><option key={`total-${day.day}`} value={day.value} disabled={day.total===null}>{day.label}</option>)}</select><small>Selected: {drivers[h.name]||'None'}. {drivers[h.name]===choice.driver ? choice.reason : 'Your edited headcount.'}</small></label>}
       </div>;
     })}
     <h3>Requirement mapping</h3>

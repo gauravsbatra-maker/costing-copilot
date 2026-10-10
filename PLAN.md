@@ -78,5 +78,10 @@
 - Fold empty or identical duplicate display rows into the existing rule, preserving original indices, source text, underlying requirements and every costing line and number. Keep conflicting non-empty rules visible.
 - Unit coverage verifies aliases, old empty duplicates, display-name duplicates and unchanged costing. Chrome verified the complete four-rule wedding list and unchanged pre-GST total. All 49 code tests, 12 browser tests and the build passed.
 - User approved committing and pushing the scaling-rule duplicate fix with data-file exclusions. No deployment requested.
+## Current follow-up — daily headcount choice
+- Keep existing function choices and add each day's total of all functions, including high tea and afters. Default function-based heads to dinner, or lunch when that day has no dinner; keep conflicting counts unselected and the existing out-of-town transfer basis unchanged.
+- Accept the selected day total as a headcount without changing rates, cost bases, source rows or other heads. Missing function counts disable that day's total rather than guessing.
+- All 50 code tests, 14 browser tests and the build passed. The existing saved-costing sign-in test timed out once and passed on a full rerun without changes. Chrome checked the wedding functions, both daily totals, dinner default and unchanged pre-GST total with 60 past-transfer guests.
+- User approved committing and pushing the day-total headcount option with data-file exclusions. No deployment requested.
 ## Parked
 None.

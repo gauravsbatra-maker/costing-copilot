@@ -1,3 +1,4 @@
+import {dailyHeadcountOptions} from '../shared/reviewChoices.ts';
 import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
 import { nightlyRooms, totalRoomNights, roomsFromBrief } from '../shared/roomNights.ts';
 import { costLabel, costText } from '../shared/displayLabels.ts';
@@ -367,4 +368,21 @@ test('review merges brief food aliases and empty sheet duplicates without changi
  assert.deepEqual(buildProposal(budget,r,{}, {}, {},true,60),before);
  r.scalingRules[r.scalingRules.length-1].head.value='Food & beverage (minimum guarantee)';
  assert.equal(scalingRuleReview(r,budget).filter(row=>row.label==='Food & beverage (minimum guarantee)').length,1);
+});
+
+test('function headcount defaults to dinner, falls back to lunch and day totals include every function',()=>{
+ const r=requirements();r.functions=r.functions.slice(0,4);
+ const b={...budget,heads:[{...head,name:'Technicals'}]};
+ assert.equal(suggestedHeadChoices(b,r).Technicals.driver,'Dinner: 1000');
+ const total=dailyHeadcountOptions(r)[0];
+ assert.equal(total.total,1650);
+ const defaults=buildProposal(b,r,{Technicals:'Dinner: 1000'},{Technicals:'headcount'},{});
+ const selected=buildProposal(b,r,{Technicals:total.value},{Technicals:'headcount'},{});
+ assert.equal(selected.heads[0].headcount,1650);
+ assert.equal(selected.heads[0].amount,Math.round(defaults.heads[0].amount!*1.65*100)/100);
+ r.functions=r.functions.filter(f=>f.name.value!=='Dinner');
+ assert.equal(suggestedHeadChoices(b,r).Technicals.driver,'Lunch: 250');
+ assert.equal(dailyHeadcountOptions(r)[0].total,650);
+ r.functions[0].guests.value='';
+ assert.equal(dailyHeadcountOptions(r)[0].total,null);
 });

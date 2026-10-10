@@ -149,7 +149,9 @@ function assumptionSummary(budget: Budget, requirements: Requirements, proposal:
         ? `Transfers use the out-of-town guest count of ${count(guests)}`
         : drivers[h.name] === choices[h.name].driver && choices[h.name].driver.startsWith('Dinner:')
           ? `Per-person heads use the dinner count of ${count(guests)}`
-          : `Per-person heads use your chosen headcount of ${count(guests)}`;
+          : drivers[h.name] === choices[h.name].driver && choices[h.name].driver.startsWith('Lunch:')
+            ? `Per-person heads use the lunch count of ${count(guests)}`
+            : `Per-person heads use your chosen headcount of ${count(guests)}`;
       add(rule, h.name);
     }
     const hasAlcohol = actual?.lines.some(l => /alcohol/i.test(l.label));

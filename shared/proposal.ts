@@ -13,6 +13,10 @@ export function numberIn(s: string): number | null {
   const n = Number(matches[0].replaceAll(',', ''));
   return Number.isFinite(n) && n > 0 ? n : null;
 }
+export function chosenHeadcount(text:string): number | null {
+  const dayTotal=/^Total for the day \(all functions\) · .+: (\d+)$/.exec(text);
+  return numberIn(dayTotal?.[1] ?? text);
+}
 export function readProposalSheet(data: ArrayBuffer | Uint8Array): Budget {
   const workbook = XLSX.read(data, { type: 'array', sheets: ['Overall WIP'] });
   const sheet = workbook.Sheets['Overall WIP'];
@@ -99,7 +103,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
   const transfers = mapHead('Transfers', budget);
   const heads = budget.heads.map(head => {
     const isTransfers = head.row === transfers?.row;
-    const headcount = isTransfers ? numberIn(requirements.fields.outOfTownGuests.value) : numberIn(drivers[head.name] ?? '') ?? (new Set(requirements.functions.map(f => numberIn(f.guests.value))).size === 1 ? numberIn(requirements.functions[0]?.guests.value ?? '') : null);
+    const headcount = isTransfers ? numberIn(requirements.fields.outOfTownGuests.value) : chosenHeadcount(drivers[head.name] ?? '') ?? (new Set(requirements.functions.map(f => numberIn(f.guests.value))).size === 1 ? numberIn(requirements.functions[0]?.guests.value ?? '') : null);
     const rule = ruleForHead(head,budget,requirements);
     const basis = bases[head.name] ?? defaultBasis(rule);
     const globalPremium = /across all heads|all heads/i.test(`${premiumText} ${requirements.fields.seasonalPremium.source}`);
