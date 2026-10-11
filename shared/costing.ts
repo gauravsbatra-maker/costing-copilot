@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import {readVisibleWorksheet} from './visibleWorksheets.ts';
+export {visibleSheetNames,readVisibleWorksheet} from './visibleWorksheets.ts';
 import {detectSheetHeader} from './sheetHeader.ts';
 
 export type Figure = number | 'could not read';
@@ -7,17 +9,12 @@ export type CostRow = { row: number; name: string; cost: Figure; nw: Figure; w: 
 export type CostHead = CostRow & { items: CostRow[] };
 export type Budget = { sheet: string; heads: CostHead[]; total: CostRow; unread: CostRow[] };
 
-export function readCosting(data: ArrayBuffer | Uint8Array): Budget {
-  // Read metadata first, then parse only the first visible worksheet.
-  const metadata = XLSX.read(data, { type: 'array', sheets: [] });
-  const sheetName = metadata.SheetNames.find(name => {
-    const entry = metadata.Workbook?.Sheets?.find(s => s.name === name);
-    return !entry?.Hidden;
-  });
-  if (!sheetName) throw new Error('No visible tab was found in this workbook.');
-  const workbook = XLSX.read(data, { type: 'array', sheets: [sheetName], cellFormula: true });
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet?.['!ref']) throw new Error('The first visible tab is empty.');
+export function readCosting(data: ArrayBuffer | Uint8Array, selected?: string): Budget {
+  const {sheet, sheetName} = readVisibleWorksheet(data, selected);
+  return readCostingWorksheet(sheet, sheetName);
+}
+export function readCostingWorksheet(sheet: XLSX.WorkSheet, sheetName: string): Budget {
+  if (!sheet?.['!ref']) throw new Error('The chosen tab is empty.');
   const range = XLSX.utils.decode_range(sheet['!ref']);
   if (range.e.r > 100000) throw new Error('This tab is too large to read safely. Please upload a smaller costing sheet.');
   const cell = (r: number, c: number) => sheet[XLSX.utils.encode_cell({ r, c })] as XLSX.CellObject | undefined;
@@ -49,6 +46,6 @@ export function readCosting(data: ArrayBuffer | Uint8Array): Budget {
     else if (current) current.items.push(row);
     else unread.push({ ...row, name: `could not read — row ${r + 1}${name !== 'could not read' ? ': ' + name : ''}` });
   }
-  if (!heads.length) throw new Error('Could not read any numbered cost heads in the first visible tab.');
+  if (!heads.length) throw new Error('Could not read any numbered cost heads in the chosen tab.');
   return { sheet: sheetName, heads, unread, total: total ?? { row: 0, name: 'Total', cost: 'could not read', nw: 'could not read', w: 'could not read' } };
 }

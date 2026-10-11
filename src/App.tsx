@@ -4,7 +4,7 @@ import SavedCostings from './SavedCostings';
 import type { SavedCosting } from '../shared/savedCosting';
 import BriefReader from './BriefReader';
 import { readProposalSheet } from '../shared/proposal';
-import {  type Budget, type CostRow, type Figure } from '../shared/costing';
+import { visibleSheetNames, type Budget, type CostRow, type Figure } from '../shared/costing';
 const format = (value: Figure) => typeof value === 'number' ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(value) : value;
 function Values({ row }: { row: CostRow }) { return <><td>{format(row.cost)}</td></>; }
 export default function App() {
@@ -12,6 +12,9 @@ export default function App() {
   const [builderKey, setBuilderKey] = useState(0);
   const [reviewPage, setReviewPage] = useState<ReactNode>(null);
   const [budget, setBudget] = useState<Budget | null>(null);
+  const [worksheetChoices, setWorksheetChoices] = useState<string[]>([]);
+  const [selectedWorksheet, setSelectedWorksheet] = useState('');
+  const workbookData = useRef<ArrayBuffer | null>(null);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,19 +23,30 @@ export default function App() {
   async function upload(file?: File) {
     if (!file) return;
     const id = ++request.current;
+    workbookData.current = null; setWorksheetChoices([]); setSelectedWorksheet('');
     setBudget(null); setError(''); setExpanded(new Set()); setFileName(file.name); setBusy(true);
     try {
       if (!/\.(xlsx|xls|xlsm|xlsb)$/i.test(file.name)) throw new Error('Please choose an Excel workbook (.xlsx, .xls, .xlsm or .xlsb).');
       if (file.size > 25 * 1024 * 1024) throw new Error('Please choose a workbook smaller than 25 MB.');
-      const result = readProposalSheet(await file.arrayBuffer());
-      if (request.current === id) setBudget(result);
+      const data = await file.arrayBuffer();
+      if (request.current !== id) return;
+      const visible = visibleSheetNames(data);
+      workbookData.current = data;
+      if (visible.length > 1) setWorksheetChoices(visible);
+      else setBudget(readProposalSheet(data));
     } catch (e) { if (request.current === id) setError(e instanceof Error ? e.message : 'could not read this workbook'); }
     finally { if (request.current === id) setBusy(false); }
   }
-  return <SavedCostings onOpen={copy=>{++request.current;setSaved(copy);setBudget(copy.budget);setFileName('Saved source rows');setReviewPage(null);setBuilderKey(k=>k+1);}} onSignOut={()=>{if(saved){setSaved(null);setBudget(null);setReviewPage(null);setBuilderKey(k=>k+1);}}}><main hidden={reviewPage !== null}>
+  function chooseWorksheet(name: string) {
+    setSelectedWorksheet(name); setBudget(null); setError(''); setExpanded(new Set());
+    if (!name || !workbookData.current) return;
+    try { setBudget(readProposalSheet(workbookData.current, name)); }
+    catch (e) { setError(e instanceof Error ? e.message : 'could not read this workbook'); }
+  }
+  return <SavedCostings onOpen={copy=>{++request.current;workbookData.current=null;setWorksheetChoices([]);setSelectedWorksheet('');setSaved(copy);setBudget(copy.budget);setFileName('Saved source rows');setReviewPage(null);setBuilderKey(k=>k+1);}} onSignOut={()=>{if(saved){setSaved(null);setBudget(null);setReviewPage(null);setBuilderKey(k=>k+1);}}}><main hidden={reviewPage !== null}>
     <header><h1>From the host's brief to a costed proposal, in one sitting.</h1><ol className="brief-steps"><li>It all starts with the Brief.</li><li>'Paste' / 'Fill the Form' - share it your way.</li><li>Add a past project's costing sheet.</li><li>Check what we found.</li><li>Then get a costed proposal where every number shows where it came from.</li></ol></header>
     <BriefReader key={builderKey} saved={saved} costHeads={budget?.heads.map(head => head.name) ?? []} budget={budget} onReview={setReviewPage} />
-    <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><p>Only the Overall WIP tab is used.</p><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
+    <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>Tip: hide every tab except the one with your final costing, and we'll read it straight away.</small>{worksheetChoices.length > 1 && <label className="worksheet-picker" htmlFor="worksheet">Costing tab<select id="worksheet" value={selectedWorksheet} onChange={e=>chooseWorksheet(e.target.value)}><option value="">Choose a costing tab</option>{worksheetChoices.map(name=><option key={name} value={name}>{name}</option>)}</select></label>}<small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
     {busy && <p role="status">Reading your workbook…</p>}
     {error && <p className="error" role="alert">{error}</p>}
     {budget && <section aria-label="Costing results"><div className="result-heading"><div><h2>{budget.sheet}</h2><p>{fileName} · Excel figures as supplied · Pre-GST only</p></div><span>Amounts in Rs</span></div><p className="hint">Click a cost head to see its line items. “could not read” means the sheet did not provide a readable value; nothing is estimated.</p><div className="table-wrap"><table><thead><tr><th scope="col">Cost head / line item</th><th scope="col">Cost (W/O GST)</th></tr></thead><tbody>

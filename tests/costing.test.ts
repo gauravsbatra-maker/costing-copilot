@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as XLSX from 'xlsx';
-import { readCosting } from '../shared/costing.ts';
+import { readCosting, visibleSheetNames } from '../shared/costing.ts';
 export function fixture(format: XLSX.BookType = 'xlsx') {
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([['Ignore hidden']]), 'Hidden first');
@@ -17,10 +17,10 @@ export function fixture(format: XLSX.BookType = 'xlsx') {
   ]);
   XLSX.utils.book_append_sheet(book, sheet, 'Overall WIP');
   XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([['Ignore later']]), 'Later visible');
-  book.Workbook = { Sheets: [{ name:'Hidden first', Hidden:1 }, { name:'Overall WIP', Hidden:0 }, { name:'Later visible', Hidden:0 }] };
+  book.Workbook = { Sheets: [{ name:'Hidden first', Hidden:1 }, { name:'Overall WIP', Hidden:0 }, { name:'Later visible', Hidden:1 }] };
   return { book, sheet, buffer: XLSX.write(book, { type:'buffer', bookType:format }) as Uint8Array };
 }
-test('reads first visible budget, groups line items and preserves pre-GST totals', () => {
+test('reads the only visible budget, groups line items and preserves pre-GST totals', () => {
   for (const format of ['xlsx', 'xls', 'xlsb'] as const) {
     const result = readCosting(fixture(format).buffer);
     assert.equal(result.sheet, 'Overall WIP');
@@ -99,4 +99,49 @@ test('detects a two-row costing header whose description column uses the project
   assert.equal(result.heads[0].row,3);
   assert.equal(result.heads[0].cost,1000);
   assert.equal(result.heads[0].items[0].row,4);
+});
+
+
+for(const format of ['xlsx','xls','xlsb'] as const) test(`${format}: several visible tabs require an explicit choice and hidden tabs cannot be chosen`,()=>{
+ const {book}=fixture();
+ book.Workbook!.Sheets![2].Hidden=0;
+ const data=XLSX.write(book,{type:'buffer',bookType:format});
+ assert.deepEqual(visibleSheetNames(data),['Overall WIP','Later visible']);
+ assert.throws(()=>readCosting(data),/Choose a costing tab/);
+ assert.equal(readCosting(data,'Overall WIP').total.cost,150000);
+ assert.throws(()=>readCosting(data,'Hidden first'),/Choose a visible costing tab/);
+ assert.throws(()=>readCosting(data,'Missing tab'),/Choose a visible costing tab/);
+});
+for(const format of ['xlsx','xls','xlsb'] as const) test(`${format}: a single visible tab works with any name and both hidden states are excluded`,()=>{
+ const book=XLSX.utils.book_new();
+ const {sheet}=fixture();
+ XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Not costing data']]),'Overall WIP');
+ XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Not costing data']]),'Private');
+ XLSX.utils.book_append_sheet(book,sheet,'Final costs');
+ book.Workbook={Sheets:[{name:'Overall WIP',Hidden:1},{name:'Private',Hidden:2},{name:'Final costs',Hidden:0}]};
+ const data=XLSX.write(book,{type:'buffer',bookType:format});
+ assert.deepEqual(visibleSheetNames(data),['Final costs']);
+ const result=readCosting(data);
+ assert.equal(result.sheet,'Final costs');assert.equal(result.total.cost,150000);
+});
+
+
+test('legacy xls hidden worksheet records are never passed to the cell reader',()=>{
+ const original=fixture('xls').buffer;
+ const container=XLSX.CFB.read(original,{type:'buffer'});
+ const stream=XLSX.CFB.find(container,'Workbook')!.content;
+ const bytes=Uint8Array.from(stream), view=new DataView(bytes.buffer);
+ for(let pos=0;pos+4<=bytes.length;){
+  const type=view.getUint16(pos,true),size=view.getUint16(pos+2,true);
+  if(type===0x85 && view.getUint8(pos+8)!==0){
+   const offset=view.getUint32(pos+4,true);
+   // Corrupt the hidden sheet's opening record; parsing it would stop the workbook reader.
+   view.setUint16(offset,0x2f,true);
+  }
+  pos+=4+size;if(type===0x0a)break;
+ }
+ XLSX.CFB.find(container,'Workbook')!.content=bytes;
+ const data=XLSX.CFB.write(container,{type:'buffer'});
+ assert.deepEqual(visibleSheetNames(data),['Overall WIP']);
+ assert.equal(readCosting(data).total.cost,150000);
 });

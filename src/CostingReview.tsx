@@ -69,12 +69,12 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   return <section aria-label="Costing review" className="costing-review">
     <h3>Match requirements to sheet rows</h3>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}
     <p>Check each meal’s source. Choose “To quote” when the past row isn’t comparable.</p>
-    {requirements.functions.map((f,i)=><label className="brief-field" key={i}><span>{f.day.value} · {f.name.value}{mealKind(f.name.value)==='tea' ? ' · headcount follows lunch' : ''}</span><select aria-label={`Source for function ${i+1}`} value={matches[i]??''} onChange={e=>setOverrides({...overrides,[i]:e.target.value?Number(e.target.value):null})}><option value="">To quote</option>{food?.items.filter(row=>mealKind(row.name)).map(row=><option key={row.row} value={row.row}>Overall WIP · {food.name} · row {row.row} — {row.name}</option>)}</select></label>)}
+    {requirements.functions.map((f,i)=><label className="brief-field" key={i}><span>{f.day.value} · {f.name.value}{mealKind(f.name.value)==='tea' ? ' · headcount follows lunch' : ''}</span><select aria-label={`Source for function ${i+1}`} value={matches[i]??''} onChange={e=>setOverrides({...overrides,[i]:e.target.value?Number(e.target.value):null})}><option value="">To quote</option>{food?.items.filter(row=>mealKind(row.name)).map(row=><option key={row.row} value={row.row}>{budget.sheet} · {food.name} · row {row.row} — {row.name}</option>)}</select></label>)}
     <h3>Cost basis for each sheet head</h3>
     <p>Fixed uses the historical head amount. Headcount scales it against your confirmed benchmark.</p>
     {budget.heads.map(h=>{
       const choice = suggestions[h.name];
-      return <div className="head-basis" key={h.row}><strong>{costLabel(h.name)}</strong><small>Overall WIP · {h.name} · row {h.row}</small>
+      return <div className="head-basis" key={h.row}><strong>{costLabel(h.name)}</strong><small>{budget.sheet} · {h.name} · row {h.row}</small>
         <label>Calculation for {costLabel(h.name)}<select aria-label={`Calculation for ${costLabel(h.name)}`} value={selectedBases[h.name]} onChange={e=>setBases({...bases,[h.name]:e.target.value as Basis})}><option value="fixed">Fixed historical cost</option><option value="headcount">Scale by chosen headcount</option></select></label>
         <small>{bases[h.name] ? 'Your edited choice. ' : 'Pre-filled. '}{bases[h.name] ? selectedBases[h.name]==='fixed' ? 'Keep the historical cost.' : 'Scale against the historical benchmark.' : choice.basisReason}</small>
         {h.row===transfers?.row && <label className="brief-field"><span>Guests the past transfers covered</span><input aria-label="Guests the past transfers covered" type="number" min="1" step="1" value={pastTransferGuestsEntry} onChange={e=>setPastTransferGuestsEntry(e.target.value)} placeholder="Enter the past transfer guest count"/><small>Transfers use the sheet’s transfer cost × out-of-town guests ÷ this count, with the existing seasonal increase. The general cost basis above does not apply to transfers.</small>{pastTransferGuests===null && <small className="amber">Missing: enter a positive whole guest count. Transfers stay To quote until supplied.</small>}</label>}
@@ -83,7 +83,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
       </div>;
     })}
     <h3>Requirement mapping</h3>
-    {requirements.scalingRules.map((r,i)=>{const heads=mappedHeads(r.head.value,budget);return <p key={i}>{costLabel(r.head.value)||'Unnamed requirement'} → {heads.length?heads.map(h=>`Overall WIP · ${h.name} · row ${h.row}`).join('; '):'To quote — no matching sheet row'}</p>;})}
+    {requirements.scalingRules.map((r,i)=>{const heads=mappedHeads(r.head.value,budget);return <p key={i}>{costLabel(r.head.value)||'Unnamed requirement'} → {heads.length?heads.map(h=>`${budget.sheet} · ${h.name} · row ${h.row}`).join('; '):'To quote — no matching sheet row'}</p>;})}
     <p>City, dates and guest details provide context. Accommodation uses a sheet row unless you explicitly confirm the brief’s room rate.</p>
     {(requirements.fields.rooms.value || requirements.roomNights?.some(row=>row.value)) && <label className="confirmation"><input type="checkbox" checked={useBriefRooms} onChange={e=>setUseBriefRooms(e.target.checked)}/>Use my reviewed brief’s rooms, room rate and nights. No further season increase on this quoted rate.</label>}
     <h3>Cost range</h3>
@@ -96,9 +96,9 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     <button className="read-brief" type="button" disabled={cityRequired||!confirmed||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={generate}>Cost it</button>
     {percentage===null&&<p className="amber">Enter a variance percentage to cost this.</p>}
     {benchmarkNeeded&&<p className="amber">Enter the benchmark headcount to scale costs.</p>}
-    {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full Overall WIP costing to cost this.</p>}
+    {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full costing tab to cost this.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
-    {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}<button className="add-detail" type="button" ref={reviewButton} onClick={()=>{if(checks && originalProposal) { onReview(<ProposalReview brief={brief} requirements={requirements} proposal={proposal} original={originalProposal} contingent={contingent} checks={checks} edits={lineEdits} percentages={linePercentages} defaults={contingencyDefaultsByHead} onBack={()=>{onReview(null);requestAnimationFrame(()=>reviewButton.current?.focus());}}/>); window.scrollTo(0,0); requestAnimationFrame(()=>document.querySelector<HTMLElement>('.proposal-review h1')?.focus()); }}}>Review proposal</button><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
+    {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}<button className="add-detail" type="button" ref={reviewButton} onClick={()=>{if(checks && originalProposal) { onReview(<ProposalReview sourceSheet={budget.sheet} brief={brief} requirements={requirements} proposal={proposal} original={originalProposal} contingent={contingent} checks={checks} edits={lineEdits} percentages={linePercentages} defaults={contingencyDefaultsByHead} onBack={()=>{onReview(null);requestAnimationFrame(()=>reviewButton.current?.focus());}}/>); window.scrollTo(0,0); requestAnimationFrame(()=>document.querySelector<HTMLElement>('.proposal-review h1')?.focus()); }}}>Review proposal</button><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
       <div className="invoice-layout"><div className="invoice-items">{proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{costLabel(h.name)} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3>{shares[h.name]&&<small className="head-share">{shares[h.name]}</small>}{notesForHead(requirements,budget,h.name).map((note,i)=><p className="service-note" key={i}>{note}</p>)}<p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{
         const key=lineKey(h.name,i), original=originalProposal!.heads.find(head=>head.name===h.name)!.lines[i];
         const edit=lineEdits[key];
@@ -109,7 +109,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
         const reserve=l.amount!==null && pct!==null ? applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].reserve : null;
         return <div className="proposal-line" key={i}>
           {(l.label !== h.name || l.amount !== h.amount) && <strong>{l.label !== h.name && `${costLabel(l.label)} · `}{l.amount!==null && pct!==null ? contingencyFigure(applyContingencies({...proposal,heads:[{...h,lines:[l],amount:l.amount}],total:l.amount},{[h.name]:pct},transfers?.name).heads[h.name].range) : 'To quote'}</strong>}
-          {l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{costText(l.calculation,budget.heads.map(h=>h.name))}</small>
+          {l.headcount!==null&&<small>{l.headcount} guests</small>}<small>{costText(l.calculation,budget.heads.map(h=>h.name),budget.sheet)}</small>
           {l.source&&l.original&&<details><summary>{l.source}</summary><p>{l.original.name} · original pre-GST: {typeof l.original.cost==='number'?rupees(l.original.cost):'To quote'}{'quantity' in l.original?` · sheet quantity: ${l.original.quantity}`:''}</p></details>}{l.source&&!l.original&&<small>{l.source}</small>}
           <div className="line-inputs">
             <label className="brief-field"><span>Quantity</span><input aria-label={`Quantity for ${name}`} type="number" min="0" step="any" value={edit?.quantity ?? original.pricing?.quantity ?? ''} onChange={e=>changeLine(key,'quantity',e.target.value)}/></label>
@@ -122,10 +122,10 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
         </div>;
       })}</div>)}
       {checks && <section aria-label="Check before you send"><h3>Check before you send</h3>
-        <h4>Missing information</h4>{checks.missing.length ? <ul>{checks.missing.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
-        <h4>Uncertain costs</h4>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
-        <h4>Assumptions and choices</h4><ul>{checks.summary.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul>
-        <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul></details>
+        <h4>Missing information</h4>{checks.missing.length ? <ul>{checks.missing.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),budget.sheet)}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
+        <h4>Uncertain costs</h4>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),budget.sheet)}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
+        <h4>Assumptions and choices</h4><ul>{checks.summary.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),budget.sheet)}</li>)}</ul>
+        <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),budget.sheet)}</li>)}</ul></details>
       </section>}
       </div><aside className="invoice-summary"><div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}</div><PricingStatus proposal={proposal}/></div>

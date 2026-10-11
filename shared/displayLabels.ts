@@ -6,8 +6,8 @@ export function costLabel(label: string): string {
   return label;
 }
 
-export function costText(text: string, headNames: string[]): string {
-  const sourceStart=text.indexOf('Overall WIP · ');
+export function costText(text: string, headNames: string[], sheetName = 'Overall WIP'): string {
+  const sourceStart=text.indexOf(`${sheetName} · `);
   let display = sourceStart<0 ? text : text.slice(0,sourceStart);
   const source=sourceStart<0 ? '' : text.slice(sourceStart);
   for (const name of [...headNames, 'Accommodation · rooms and nights'].sort((a,b)=>b.length-a.length)) {

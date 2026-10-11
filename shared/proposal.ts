@@ -1,7 +1,7 @@
 import {detectSheetHeader} from './sheetHeader.ts';
 import { totalRoomNights } from './roomNights.ts';
 import * as XLSX from 'xlsx';
-import { readCosting, type Budget, type CostHead, type CostRow } from './costing.ts';
+import { readVisibleWorksheet, readCostingWorksheet, type Budget, type CostHead, type CostRow } from './costing.ts';
 import type { Requirements } from './brief.ts';
 export type ProposalRow = CostRow & { quantity?: number; rate?: number };
 export type Basis = 'fixed' | 'headcount';
@@ -18,13 +18,9 @@ export function chosenHeadcount(text:string): number | null {
   const dayTotal=/^Total for the day \(all functions\) · .+: (\d+)$/.exec(text);
   return numberIn(dayTotal?.[1] ?? text);
 }
-export function readProposalSheet(data: ArrayBuffer | Uint8Array): Budget {
-  const workbook = XLSX.read(data, { type: 'array', sheets: ['Overall WIP'] });
-  const sheet = workbook.Sheets['Overall WIP'];
-  if (!sheet) throw new Error('This file has no Overall WIP tab. Upload the costing sheet from a past project.');
-  // Reuse the unchanged milestone 1 reader on an in-memory, one-tab workbook.
-  const only = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(only, sheet, 'Overall WIP');
-  const budget = readCosting(XLSX.write(only, { type: 'array', bookType: 'xlsx' }));
+export function readProposalSheet(data: ArrayBuffer | Uint8Array, selected?: string): Budget {
+  const {sheet, sheetName} = readVisibleWorksheet(data, selected);
+  const budget = readCostingWorksheet(sheet, sheetName);
   const {quantity:qty,rate} = detectSheetHeader(sheet);
   for (const head of budget.heads) for (const item of head.items) {
     const row = item as ProposalRow;
@@ -96,7 +92,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     if (typeof row.cost !== 'number' || row.cost < 0 || multiplier === null || !Number.isFinite(multiplier)) return quote(label, 'No readable sheet cost or confirmed calculation basis.', headcount);
     const amount = money(row.cost * multiplier);
     if (!Number.isSafeInteger(Math.round(amount * 100))) return quote(label, 'Cost is too large to calculate safely.', headcount);
-    return { label, amount, source: `Overall WIP · ${head.name} · row ${row.row}`, original: row, headcount, calculation, pricing: { quantity, unitCost: row.cost / divisor, multiplier: multiplier / (quantity / divisor) } };
+    return { label, amount, source: `${budget.sheet} · ${head.name} · row ${row.row}`, original: row, headcount, calculation, pricing: { quantity, unitCost: row.cost / divisor, multiplier: multiplier / (quantity / divisor) } };
   };
   const food = mapHead('Food', budget);
   const transfers = mapHead('Transfers', budget);
@@ -115,7 +111,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
       const line = validPastCount
         ? price(head.name, head, head, headcount !== null ? headcount / pastTransferGuests! * applyPremium : null, headcount, calculation, headcount!, pastTransferGuests!)
         : quote(head.name, 'Guests the past transfers covered is missing or invalid. Enter a positive whole guest count.', headcount);
-      lines = [{ ...line, source: `Overall WIP · ${head.name} · row ${head.row}`, original: head }];
+      lines = [{ ...line, source: `${budget.sheet} · ${head.name} · row ${head.row}`, original: head }];
     } else if (head.row === food?.row && requirements.fromBriefForm && !requirements.functions.length) {
       lines = [quote(head.name, 'No function guest counts stated in the client brief form.')];
     } else if (head.row === food?.row && requirements.functions.length) {

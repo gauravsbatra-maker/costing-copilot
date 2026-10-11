@@ -41,10 +41,10 @@ test('scale selected heads with confirmed benchmark, fixed heads retain sheet am
  assert.equal(buildProposal(b,r,{}, {Decor:'fixed'},{}).heads[0].lines[0].amount,1100);
  assert.equal(buildProposal(b,r,{}, {Decor:'headcount'},{}).heads[0].lines[0].amount,null);
 });
-test('proposal reads Overall WIP even when another tab comes first', () => {
+test('proposal reads a chosen visible tab and keeps its quantity, rate and source rows', () => {
  const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Ignore']]),'Other');
- XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Sr No','Description','Qty','Days','Total','Rate','Cost'],[null,null,null,null,null,null,'W/0 GST','NW','W'],[1,'Food',null,null,null,null,800,0,800],[null,'Lunch',100,1,100,8,800,0,800],[null,'Total',null,null,null,null,800,0,800]]),'Overall WIP');
- const b=readProposalSheet(XLSX.write(book,{type:'buffer',bookType:'xlsx'})); assert.equal(b.heads[0].items[0].quantity,100); assert.equal(b.heads[0].items[0].row,4);
+ XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Sr No','Description','Qty','Days','Total','Rate','Cost'],[null,null,null,null,null,null,'W/0 GST','NW','W'],[1,'Food',null,null,null,null,800,0,800],[null,'Lunch',100,1,100,8,800,0,800],[null,'Total',null,null,null,null,800,0,800]]),'Final estimate');
+ const b=readProposalSheet(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),'Final estimate'); assert.equal(b.heads[0].items[0].quantity,100); assert.equal(b.heads[0].items[0].row,4); assert.equal(b.sheet,'Final estimate'); assert.equal(b.heads[0].items[0].rate,8); assert.equal(b.heads[0].items[0].cost,800);
  assert.throws(()=>readProposalSheet(XLSX.write(XLSX.utils.book_new(),{type:'buffer',bookType:'xlsx'})));
 });
 
@@ -437,4 +437,15 @@ test('quantity and rate labels are detected across both header rows, never after
  const result=readProposalSheet(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
  const row=result.heads[0].items[0] as {quantity?:number;rate?:number;cost:number|string;row:number};
  assert.equal(row.quantity,100);assert.equal(row.rate,8);assert.equal(row.cost,800);assert.equal(row.row,4);
+});
+
+
+test('chosen tab names follow the source reference without changing prices or display labels',()=>{
+ const r=requirements(),drivers={'Taj Hotel Expenses':'Dinner: 1000'};
+ const before=buildProposal(budget,r,drivers,{},{});
+ const after=buildProposal({...budget,sheet:'Final costing'},r,drivers,{},{});
+ assert.equal(after.total,before.total);
+ assert.deepEqual(after.heads.map(h=>h.amount),before.heads.map(h=>h.amount));
+ assert.equal(after.heads[0].lines[0].source,'Final costing · Taj Hotel Expenses · row 5');
+ assert.equal(costText('Taj Hotel Expenses — source: Final costing · Taj Hotel Expenses · row 5',['Taj Hotel Expenses'],'Final costing'),'Food & beverage — source: Final costing · Taj Hotel Expenses · row 5');
 });

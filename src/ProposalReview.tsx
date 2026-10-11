@@ -12,6 +12,7 @@ import type { ProposalChecks } from '../shared/proposalChecks';
 import { rupees, type RangedProposal } from '../shared/proposal';
 
 type Props = {
+  sourceSheet?: string;
   brief: string;
   requirements: Requirements;
   proposal: RangedProposal;
@@ -24,7 +25,7 @@ type Props = {
   onBack: () => void;
 };
 
-export default function ProposalReview({ brief, requirements, proposal, original, contingent, checks, edits, percentages, defaults, onBack }: Props) {
+export default function ProposalReview({ sourceSheet = 'Overall WIP', brief, requirements, proposal, original, contingent, checks, edits, percentages, defaults, onBack }: Props) {
   const perGuest=perGuestLine(requirements,contingent), shares=midpointShares(contingent);
   const event = reviewEvent(brief,requirements.fields.days);
   const missing = event.type ? checks.missing : ['Event type: Not stated in brief.', ...checks.missing];
@@ -40,10 +41,10 @@ export default function ProposalReview({ brief, requirements, proposal, original
       {requirements.functions.length ? <ul>{requirements.functions.map((f,i)=><li key={i}>{value(f.day.value)} · {value(f.name.value)} · Guests: {value(f.guests.value)}</li>)}</ul> : <p>No confirmed functions recorded.</p>}
     </section>
     <section aria-labelledby="review-assumptions"><h2 id="review-assumptions">Assumptions</h2>
-      <h3>Missing information</h3>{missing.length ? <ul>{missing.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
-      <h3>Uncertain costs</h3>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
-      <h3>Assumptions and choices</h3><ul>{checks.summary.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul>
-      <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name))}</li>)}</ul></details>
+      <h3>Missing information</h3>{missing.length ? <ul>{missing.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),sourceSheet)}</li>)}</ul> : <p>No missing information flagged in the reviewed fields.</p>}
+      <h3>Uncertain costs</h3>{checks.uncertain.length ? <ul>{checks.uncertain.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),sourceSheet)}</li>)}</ul> : <p>No uncertain costs flagged.</p>}
+      <h3>Assumptions and choices</h3><ul>{checks.summary.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),sourceSheet)}</li>)}</ul>
+      <details><summary>Show all assumptions</summary><ul>{checks.assumptions.map((text,i)=><li key={i}>{costText(text,proposal.heads.map(h=>h.name),sourceSheet)}</li>)}</ul></details>
     </section>
     <section aria-labelledby="review-costs"><h2 id="review-costs">Costs</h2>
       <table aria-label="Reviewed costs"><thead><tr><th scope="col">Cost head</th><th scope="col">Range</th><th scope="col">Midpoint</th><th scope="col">Source row</th><th scope="col">Contingency %</th></tr></thead>
