@@ -250,7 +250,9 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-heig
 /* Strong working-screen hierarchy; all existing text and controls stay in place. */
 header { max-width: 1040px; }
 h1 { font-size: 56px; line-height: 1.12; letter-spacing: -.025em; }
-header>p { max-width: 72ch; }
+.brief-steps { max-width: 72ch; margin: 12px 0 20px; padding-left: 1.5em; color: var(--muted); font-size: 16px; line-height: 1.65; list-style-position: outside; }
+.brief-steps li { margin: 0; padding-left: .35em; }
+.brief-steps li::marker { font-variant-numeric: tabular-nums; }
 .requirements>h2, [aria-label='Costed proposal']>h2,
 .account-panel>h2, .result-heading h2 { font-size: 48px; line-height: 1.18; }
 .proposal-review>.add-detail,
