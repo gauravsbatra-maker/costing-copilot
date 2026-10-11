@@ -74,13 +74,14 @@ test('choose among visible tabs only and use the chosen tab without reading hidd
   XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows('Decor',2000)),'Final costing');
   book.Workbook={Sheets:[{name:'Overall WIP',Hidden:1},{name:'Budget draft',Hidden:0},{name:'Private',Hidden:2},{name:'Final costing',Hidden:0}]};
   await page.goto('/');
+  await expect(page.getByText("For your privacy: keep only your final costing tab visible and hide all other tabs before uploading. We read only the visible tab, hidden tabs are never opened.",{exact:true})).toBeVisible();
   await page.getByLabel('Excel costing sheet').setInputFiles({name:'visible-tabs.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
   const picker=page.getByRole('combobox',{name:'Costing tab',exact:true});
   await expect(picker).toBeVisible();
   await expect(picker.locator('option')).toHaveText(['Choose a costing tab','Budget draft','Final costing']);
   await expect(page.getByRole('table')).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByText("Tip: hide every tab except the one with your final costing, and we'll read it straight away.",{exact:true})).toBeVisible();
+  await expect(page.getByText("For your privacy: keep only your final costing tab visible and hide all other tabs before uploading. We read only the visible tab, hidden tabs are never opened.",{exact:true})).toBeVisible();
   await picker.selectOption('Final costing');
   await expect(page.getByRole('heading',{name:'Final costing',exact:true})).toBeVisible();
   await expect(page.getByRole('row').filter({hasText:'Decor'})).toContainText('2,000');
