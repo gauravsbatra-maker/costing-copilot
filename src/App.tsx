@@ -1,5 +1,6 @@
 import { costLabel } from '../shared/displayLabels';
 import { Fragment, useRef, useState, type ReactNode } from 'react';
+import PhoneOrientationHint from './PhoneOrientationHint';
 import SavedCostings from './SavedCostings';
 import type { SavedCosting } from '../shared/savedCosting';
 import BriefReader from './BriefReader';
@@ -43,7 +44,7 @@ export default function App() {
     try { setBudget(readProposalSheet(workbookData.current, name)); }
     catch (e) { setError(e instanceof Error ? e.message : 'could not read this workbook'); }
   }
-  return <SavedCostings onOpen={copy=>{++request.current;workbookData.current=null;setWorksheetChoices([]);setSelectedWorksheet('');setSaved(copy);setBudget(copy.budget);setFileName('Saved source rows');setReviewPage(null);setBuilderKey(k=>k+1);}} onSignOut={()=>{if(saved){setSaved(null);setBudget(null);setReviewPage(null);setBuilderKey(k=>k+1);}}}><main hidden={reviewPage !== null}>
+  return <><PhoneOrientationHint/><SavedCostings onOpen={copy=>{++request.current;workbookData.current=null;setWorksheetChoices([]);setSelectedWorksheet('');setSaved(copy);setBudget(copy.budget);setFileName('Saved source rows');setReviewPage(null);setBuilderKey(k=>k+1);}} onSignOut={()=>{if(saved){setSaved(null);setBudget(null);setReviewPage(null);setBuilderKey(k=>k+1);}}}><main hidden={reviewPage !== null}>
     <header><h1>From the host's brief to a costed proposal, in one sitting.</h1><ol className="brief-steps"><li>It all starts with the Brief.</li><li>'Paste' / 'Fill the Form' - share it your way.</li><li>Add a past project's costing sheet.</li><li>Check what we found.</li><li>Then get a costed proposal where every number shows where it came from.</li></ol></header>
     <BriefReader key={builderKey} saved={saved} costHeads={budget?.heads.map(head => head.name) ?? []} budget={budget} onReview={setReviewPage} />
     <section className="upload"><label htmlFor="workbook">Excel costing sheet</label><input id="workbook" type="file" accept=".xlsx,.xls,.xlsm,.xlsb" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>For your privacy: keep only your final costing tab visible and hide all other tabs before uploading. We read only the visible tab, hidden tabs are never opened.</small>{worksheetChoices.length > 1 && <label className="worksheet-picker" htmlFor="worksheet">Costing tab<select id="worksheet" value={selectedWorksheet} onChange={e=>chooseWorksheet(e.target.value)}><option value="">Choose a costing tab</option>{worksheetChoices.map(name=><option key={name} value={name}>{name}</option>)}</select></label>}<small>Your file stays in this browser. Nothing is uploaded or saved. No login required.</small></section>
@@ -53,5 +54,5 @@ export default function App() {
       {budget.unread.map(row => <tr key={row.row}><th scope="row">{costLabel(row.name)}</th><Values row={row}/></tr>)}
       {budget.heads.map(head => <Fragment key={head.row}><tr className="head"><th scope="row"><button aria-expanded={expanded.has(head.row)} onClick={() => setExpanded(prev => { const next = new Set(prev); next.has(head.row) ? next.delete(head.row) : next.add(head.row); return next; })}><span aria-hidden="true">{expanded.has(head.row) ? '−' : '+'}</span>{costLabel(head.name)}<small>Row {head.row} · {head.items.length} line items</small></button></th><Values row={head}/></tr>{expanded.has(head.row) && (head.items.length ? head.items.map(item => <tr className="item" key={item.row}><th scope="row">{costLabel(item.name)}<small>Row {item.row}</small></th><Values row={item}/></tr>) : <tr><td colSpan={2}>No line items in this cost head.</td></tr>)}</Fragment>)}
     </tbody><tfoot><tr><th scope="row">Total{budget.total.row > 0 && <small>Sheet row {budget.total.row}</small>}</th><Values row={budget.total}/></tr></tfoot></table></div></section>}
-  </main>{reviewPage}</SavedCostings>;
+  </main>{reviewPage}</SavedCostings></>;
 }

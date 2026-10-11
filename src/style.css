@@ -280,3 +280,26 @@ h1 { font-size: 56px; line-height: 1.12; letter-spacing: -.025em; }
 .invoice-summary>p { order: 3; }
 .costing-review:not(:has([aria-label='Costed proposal']))>button.add-detail:disabled,
 .account-panel li:first-child>button:first-of-type:disabled { opacity: 1; cursor: not-allowed; }
+
+/* Keep desktop unchanged; phone fields stack beneath their complete row label. */
+.form-mobile-hint, .phone-orientation-hint { display: none; }
+@media (width < 600px) {
+  .brief-form-layout, .brief-form-layout tbody, .brief-form-layout tr { display: block; width: 100%; }
+  .brief-form-layout colgroup, .brief-form-layout thead,
+  .brief-form-layout th, .brief-form-layout td:nth-child(2) { display: none; }
+  .brief-form-layout td:nth-child(3) { display: block; width: 100%; padding: 16px 0; }
+  .brief-form-layout td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 8px; }
+  .brief-form-layout input, .brief-form-layout textarea { padding: 10px 12px; }
+  .brief-form-layout input::placeholder, .brief-form-layout textarea::placeholder { color: transparent; }
+  .brief-form-layout .form-mobile-hint { display: block; margin-top: 6px; overflow-wrap: anywhere; }
+  .brief-form-layout .service-note-input { display: block; }
+  .brief-form-layout .service-note-input textarea { width: 100%; }
+  .brief-form-layout .service-note-input small { width: 100%; margin-top: 6px; }
+  .brief-form-layout .form-actions td { display: none; }
+  .brief-form-layout .form-actions td:nth-child(2) { display: block; padding: 8px 0 16px; }
+}
+@media (width < 600px) and (orientation: portrait) {
+  .phone-orientation-hint { display: flex; align-items: flex-start; gap: 12px; margin: 12px 18px 0; padding: 12px; border: 1px solid var(--rule); border-radius: 4px; background: var(--linen); color: var(--ink); font-size: 16px; }
+  .phone-orientation-hint p { margin: 0; color: inherit; }
+  .phone-orientation-hint button { flex: 0 0 32px; min-height: 32px; display: grid; place-items: center; }
+}

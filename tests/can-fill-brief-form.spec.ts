@@ -44,3 +44,38 @@ test('mostly blank form costs without inventing rooms, transfer pax or function 
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook()});await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
  const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(proposal.locator('.proposal-total')).toContainText('Pre-GST total');await expect(page.getByRole('region',{name:'Costing review',exact:true})).toContainText('City not confirmed');await expect(proposal.locator('.service-note')).toHaveCount(0);await expect(proposal).not.toContainText('room nights ×');await expect(proposal.locator('.pricing-status')).toContainText('To quote: 2 lines not in this total');expect(errors).toEqual([]);
 });
+
+
+test('phone form stacks labels, inputs and complete hints; portrait tip dismisses for the session',async({page})=>{
+ await page.goto('/');
+ const tip=page.getByRole('complementary',{name:'Phone viewing tip'});
+ await expect(tip).toBeHidden();
+ await page.getByRole('tab',{name:'Fill brief form',exact:true}).click();
+ const form=page.getByRole('tabpanel',{name:'Fill brief form',exact:true});
+ await page.setViewportSize({width:390,height:844});
+ await expect(tip).toBeVisible();
+ await expect(tip).toContainText('🎬 For a desktop-like view, turn your phone sideways, just like watching a movie.');
+ const room=form.getByLabel('Guest Rooms – Day 1',{exact:true});
+ const cell=room.locator('xpath=ancestor::td');
+ expect(await cell.evaluate(el=>getComputedStyle(el,'::before').content)).toBe('"Guest Rooms · Day 1"');
+ const roomBox=await room.boundingBox(), cellBox=await cell.boundingBox();
+ expect(roomBox!.width).toBeGreaterThan(cellBox!.width-80);
+ const date=form.getByLabel('Event dates',{exact:true});
+ const hint=form.getByText('Mention days count only if dates unconfirmed',{exact:true});
+ await expect(hint).toBeVisible();
+ expect((await hint.boundingBox())!.y).toBeGreaterThan((await date.boundingBox())!.y+(await date.boundingBox())!.height);
+ await form.locator('tbody[aria-label="Guest Rooms"]').getByRole('button',{name:'Add day',exact:true}).click();
+ await expect(form.getByLabel('Guest Rooms – Day 2',{exact:true})).toBeVisible();
+ await form.getByRole('button',{name:'Add service',exact:true}).click();
+ await expect(form.getByText('Service name',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.setViewportSize({width:844,height:390});
+ await expect(tip).toBeHidden();
+ await expect(hint).toBeHidden();
+ await page.setViewportSize({width:390,height:844});
+ await expect(tip).toBeVisible();
+ await page.getByRole('button',{name:'Dismiss phone viewing tip'}).click();
+ await expect(tip).toHaveCount(0);
+ await page.reload();
+ await expect(tip).toHaveCount(0);
+});
