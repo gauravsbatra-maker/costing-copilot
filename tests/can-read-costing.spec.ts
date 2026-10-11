@@ -24,6 +24,9 @@ test('upload a workbook and expand pre-GST line items without sending the file',
   await expect(page.getByText('hidden sentinel')).toHaveCount(0);
   await expect(page.getByRole('columnheader',{name:'GST',exact:true})).toHaveCount(0);
   await expect(page.getByText('1,18,000',{exact:true})).toHaveCount(0);
+  await expect(page.getByRole('columnheader')).toHaveCount(2);
+  await expect(page.getByText('60,000',{exact:true})).toHaveCount(0);
+  await expect(page.getByText(/headers.*row [12]|row [12].*headers/i)).toHaveCount(0);
   expect(posts).toBe(0);
   await page.setViewportSize({width:390,height:844});
   await expect(page.getByRole('button',{name:/Venue/})).toBeVisible();
@@ -31,4 +34,31 @@ test('upload a workbook and expand pre-GST line items without sending the file',
   await page.getByLabel('Excel costing sheet').setInputFiles({name:'broken.xlsx',mimeType:'application/octet-stream',buffer:Buffer.from('broken')});
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('table')).toHaveCount(0);
+});
+
+
+test('detects a two-row header using only A:G and gives a plain error when no header exists', async ({page})=>{
+  const upload=async(rows:unknown[][])=>{
+    const book=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
+    await page.getByLabel('Excel costing sheet').setInputFiles({name:'test-costing.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+  };
+  await page.goto('/');
+  await upload([
+    ['Example costing'],
+    ['Sr No','Cost head','','','','','Cost'],
+    ['','','Qty','Days','Total','Rate','W/O GST'],
+    [1,'Venue','','','','',1000],
+    ['','Hall rental',2,1,2,500,1000],
+    ['','Total','','','','',1000]
+  ]);
+  await expect(page.getByRole('row').filter({hasText:'Venue'})).toContainText('1,000');
+  await page.getByRole('button',{name:/Venue/}).click();
+  await expect(page.getByText('Hall rental')).toBeVisible();
+  await expect(page.getByRole('columnheader')).toHaveCount(2);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await upload([['Unknown sheet'],[1,'Venue',1000]]);
+  await expect(page.getByRole('alert')).toHaveText("Could not read the header. Please check the sheet's column labels and try again.");
+  await expect(page.getByRole('table')).toHaveCount(0);
+  await expect(page.getByRole('combobox')).toHaveCount(0);
 });

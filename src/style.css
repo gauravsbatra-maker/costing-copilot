@@ -205,7 +205,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-heig
   th, td { padding: 12px 6px; font-size: 16px; }
   .item th { padding-left: 16px; }
   .table-wrap table, .table-wrap thead, .table-wrap tbody, .table-wrap tfoot { display: block; }
-  .table-wrap tr { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-bottom: 1px solid var(--rule); }
+  .table-wrap tr { display: grid; grid-template-columns: minmax(0,1fr); border-bottom: 1px solid var(--rule); }
   .table-wrap th, .table-wrap td { width: auto; min-width: 0; padding: 10px 8px; border: 0; }
   .table-wrap th:first-child { grid-column: 1 / -1; width: auto; }
   .table-wrap td { white-space: normal; overflow-wrap: anywhere; }

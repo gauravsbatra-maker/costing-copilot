@@ -130,5 +130,10 @@
 - Use solid terracotta main actions with white text while retaining disabled behavior, and keep Save visible ahead of the long summary through styling. Retain limewash/linen grounds, margins, labels, rules and flow.
 - Refresh the external before/after gallery at desktop and 390px using the existing reviewed wedding brief and original sheet. Keep screenshots and real data out of the repo; use invented data for account examples.
 - All 56 code tests, 16 browser tests and the build passed. Chrome verified the unchanged wedding midpoint, edit/reset totals, account actions and no sideways phone scrolling. The external gallery has fresh before/after captures for all working views. User authorized commit and push with data-file exclusions. No deployment requested.
+## Current follow-up — automatic headers and column G benchmarks
+- Detect one- or two-row headers automatically from A:G, including project-title description headers and quantity/rate labels on either header row. Header failures show one check-the-sheet error; there is no row-choice control.
+- Read benchmark costs exclusively from G; ignore later columns for header detection, line membership and amounts. Remove NW/W readback columns while retaining empty legacy fields for saved-costing compatibility. Preserve all scaling, rates and source rows.
+- All 60 code tests, 17 browser tests and the build passed. The save/sign-in browser test timed out once, passed its unchanged retry and passed the final full suite. Chrome verified the unchanged wedding midpoint with the original Tara workbook and the previously validated brief reading/source quotes (the original brief text file is no longer present). A direct old/new reader comparison confirmed identical costs, quantities, rates and source rows throughout the original workbook.
+- User authorized commit and push only if the midpoint stayed unchanged; that condition passed. Real inputs and evidence remain outside the repo. No deployment requested.
 ## Parked
 None.

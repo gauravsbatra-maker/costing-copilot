@@ -24,11 +24,11 @@ test('reads first visible budget, groups line items and preserves pre-GST totals
   for (const format of ['xlsx', 'xls', 'xlsb'] as const) {
     const result = readCosting(fixture(format).buffer);
     assert.equal(result.sheet, 'Overall WIP');
-    assert.deepEqual(result.heads.map(h => [h.name,h.cost,h.nw,h.w,h.items.length]), [['Venue',100000,60000,40000,2],['Production',50000,20000,30000,1]]);
+    assert.deepEqual(result.heads.map(h => [h.name,h.cost,h.nw,h.w,h.items.length]), [['Venue',100000,'could not read','could not read',2],['Production',50000,'could not read','could not read',1]]);
     assert.equal(result.heads[0].items[1].cost, 'could not read');
     assert.equal(result.total.cost,150000);
-    assert.equal(result.total.nw,80000);
-    assert.equal(result.total.w,70000);
+    assert.equal(result.total.nw,'could not read');
+    assert.equal(result.total.w,'could not read');
   }
 });
 test('flags missing formula caches, errors and missing total instead of calculating', () => {
@@ -61,7 +61,42 @@ test('reads merged two-row headers with W/0 GST and starts data on row 3', () =>
   const result = readCosting(XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }));
   assert.equal(result.sheet, 'Overall WIP');
   assert.equal(result.heads[0].row, 3);
-  assert.deepEqual(result.heads.map(h => [h.name, h.cost, h.nw, h.w, h.items.length]), [['Venue', 100000, 60000, 40000, 2], ['Production', 50000, 20000, 30000, 1]]);
+  assert.deepEqual(result.heads.map(h => [h.name, h.cost, h.nw, h.w, h.items.length]), [['Venue', 100000, 'could not read', 'could not read', 2], ['Production', 50000, 'could not read', 'could not read', 1]]);
   assert.equal(result.unread.length, 0);
-  assert.deepEqual([result.total.cost, result.total.nw, result.total.w], [150000, 80000, 70000]);
+  assert.deepEqual([result.total.cost, result.total.nw, result.total.w], [150000, 'could not read', 'could not read']);
+});
+
+test('detects headers without columns after G and uses G even when a later column claims to be cost',()=>{
+ const {book,sheet}=fixture();
+ for(const key of Object.keys(sheet))if(/^[H-Z]+\d+$/.test(key))delete sheet[key];
+ sheet.H2={t:'s',v:'Cost (W/O GST)'};sheet.H3={t:'n',v:99999999};
+ const result=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ assert.equal(result.heads[0].cost,100000);assert.equal(result.heads[0].items[0].cost,80000);
+ assert.equal(result.heads[0].nw,'could not read');assert.equal(result.heads[0].w,'could not read');
+});
+test('changing or adding cells after G cannot change parsed costs, headers or line membership',()=>{
+ const {book,sheet}=fixture();
+ const before=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ for(const key of Object.keys(sheet))if(/^[H-Z]+\d+$/.test(key))sheet[key]={t:'s',v:'ignored changed value'};
+ const after=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ assert.deepEqual(after,before);
+ const rows=[['Sr No','Cost head','Qty','Days','Total','Rate','Cost (W/O GST)'],[1,'Venue',null,null,null,null,1000],[null,null,null,null,null,null,null,88888],[null,'Rental',1,1,1,1000,1000],[null,'Total',null,null,null,null,1000]];
+ const one=XLSX.utils.book_new();XLSX.utils.book_append_sheet(one,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
+ assert.equal(readCosting(XLSX.write(one,{type:'buffer',bookType:'xlsx'})).heads[0].items.length,1);
+});
+
+
+test('detects a two-row costing header whose description column uses the project title',()=>{
+  const book=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([
+    ['Sr No','Estimated Work In Progress Event Cost Sheet','Qty','Days','Total','Rate','Cost'],
+    ['','','','Shift','','','W/0 GST'],
+    [1,'Venue','','','','',1000],
+    ['','Hall rental',2,1,2,500,1000],
+    ['','Total','','','','',1000]
+  ]),'Overall WIP');
+  const result=readCosting(XLSX.write(book,{type:'array',bookType:'xlsx'}));
+  assert.equal(result.heads[0].row,3);
+  assert.equal(result.heads[0].cost,1000);
+  assert.equal(result.heads[0].items[0].row,4);
 });

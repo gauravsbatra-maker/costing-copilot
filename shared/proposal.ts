@@ -1,3 +1,4 @@
+import {detectSheetHeader} from './sheetHeader.ts';
 import { totalRoomNights } from './roomNights.ts';
 import * as XLSX from 'xlsx';
 import { readCosting, type Budget, type CostHead, type CostRow } from './costing.ts';
@@ -24,13 +25,11 @@ export function readProposalSheet(data: ArrayBuffer | Uint8Array): Budget {
   // Reuse the unchanged milestone 1 reader on an in-memory, one-tab workbook.
   const only = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(only, sheet, 'Overall WIP');
   const budget = readCosting(XLSX.write(only, { type: 'array', bookType: 'xlsx' }));
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: true, defval: null });
-  const header = rows.find(row => clean(String(row[0])) === 'srno');
-  const qty = header?.findIndex(v => clean(String(v)) === 'qty') ?? -1;
-  const rate = header?.findIndex(v => clean(String(v)) === 'rate') ?? -1;
+  const {quantity:qty,rate} = detectSheetHeader(sheet);
   for (const head of budget.heads) for (const item of head.items) {
     const row = item as ProposalRow;
-    const q = rows[item.row - 1]?.[qty], r = rows[item.row - 1]?.[rate];
+    const q = qty>=0 ? sheet[XLSX.utils.encode_cell({r:item.row-1,c:qty})]?.v : undefined;
+    const r = rate>=0 ? sheet[XLSX.utils.encode_cell({r:item.row-1,c:rate})]?.v : undefined;
     if (typeof q === 'number' && Number.isFinite(q) && q > 0) row.quantity = q;
     if (typeof r === 'number' && Number.isFinite(r) && r >= 0) row.rate = r;
   }
