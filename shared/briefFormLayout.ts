@@ -18,7 +18,7 @@ export function requirementsFromForm(draft:FormLayoutDraft):Requirements {
   fields.city=provided(draft.city);fields.dates=provided(draft.dates);
   const duration=/\b(\d+)\s*days?\b/i.exec(draft.dates);if(duration)fields.days=provided(duration[1]+' days',draft.dates);
   const transfers=draft.transfers.map((count,i)=>({count,day:i+1})).filter(row=>row.count.trim());
-  if(transfers.length)fields.outOfTownGuests=provided(String(transfers.reduce((sum,row)=>sum+Number(row.count),0)),transfers.map(row=>`Day ${row.day}: ${row.count} pax`).join('; '));
+  if(transfers.length)fields.outOfTownGuests=provided(String(Math.ceil(transfers.reduce((sum,row)=>sum+Number(row.count),0)/transfers.length)),`${transfers.map(row=>`Day ${row.day}: ${row.count} pax`).join('; ')}; average across ${transfers.length} days`);
   return {fromBriefForm:true,fields,roomNights:draft.rooms.flatMap((count,i)=>count.trim()?[provided(count,`Day ${i+1}: ${count} rooms`)]:[]),functions:draft.food.flatMap((day,i)=>day.filter(f=>f.guests.trim()).map(f=>({day:provided(`Day ${i+1}`),name:provided(f.name),guests:provided(f.guests)}))),scalingRules:[],serviceNotes:draft.services.filter(s=>s.note.trim()).map(s=>({name:s.name.trim(),text:s.note.trim()}))};
 }
 export function layoutBriefText(draft:FormLayoutDraft):string {

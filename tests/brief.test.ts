@@ -1,4 +1,5 @@
 import {emptyFormLayout,printableBlankBrief,requirementsFromForm,layoutBriefText} from '../shared/briefFormLayout.ts';
+import {totalRoomNights} from '../shared/roomNights.ts';
 import { reviewEvent } from '../shared/reviewEvent.ts';
 import { selectedEventCity } from '../shared/eventCity.ts';
 import { test } from 'node:test';
@@ -142,7 +143,21 @@ test('form maps only stated counts and keeps instructions out of pricing fields'
  const blank=requirementsFromForm(draft);assert.deepEqual(blank.functions,[]);assert.deepEqual(blank.roomNights,[]);assert.equal(blank.fields.outOfTownGuests.status,'missing');
  draft.eventType='Wedding';draft.dates='2 days';draft.rooms=['30','','40'];draft.transfers=['60','','15'];draft.food[0][2].guests='1000';draft.services[0].note='₹99 per guest; seasonal +90%; fixed setup';
  const before=structuredClone(draft),r=requirementsFromForm(draft);
- assert.deepEqual(r.roomNights?.map(f=>f.value),['30','40']);assert.equal(r.fields.outOfTownGuests.value,'75');assert.equal(r.functions.length,1);assert.equal(r.functions[0].name.value,'Dinner');assert.equal(r.functions[0].guests.value,'1000');assert.equal(r.fields.roomRate.status,'missing');assert.equal(r.fields.seasonalPremium.status,'missing');assert.equal(r.fields.benchmarkHeadcount.status,'missing');assert.deepEqual(r.scalingRules,[]);assert.deepEqual(r.serviceNotes,[{name:'Décor',text:draft.services[0].note}]);assert.deepEqual(draft,before);
+ assert.deepEqual(r.roomNights?.map(f=>f.value),['30','40']);assert.equal(r.fields.outOfTownGuests.value,'38');assert.equal(r.functions.length,1);assert.equal(r.functions[0].name.value,'Dinner');assert.equal(r.functions[0].guests.value,'1000');assert.equal(r.fields.roomRate.status,'missing');assert.equal(r.fields.seasonalPremium.status,'missing');assert.equal(r.fields.benchmarkHeadcount.status,'missing');assert.deepEqual(r.scalingRules,[]);assert.deepEqual(r.serviceNotes,[{name:'Décor',text:draft.services[0].note}]);assert.deepEqual(draft,before);
+});
+
+test('transfer pax average filled days with upward rounding while room nights still sum',()=>{
+ const draft=emptyFormLayout();draft.transfers=['400','500'];draft.rooms=['200','250'];
+ const r=requirementsFromForm(draft);
+ assert.equal(r.fields.outOfTownGuests.value,'450');
+ assert.equal(r.fields.outOfTownGuests.source,'Day 1: 400 pax; Day 2: 500 pax; average across 2 days');
+ assert.deepEqual(r.roomNights?.map(row=>row.value),['200','250']);
+ assert.equal(totalRoomNights(r.roomNights!),450);
+ draft.transfers=['400','','501'];
+ assert.equal(requirementsFromForm(draft).fields.outOfTownGuests.value,'451');
+ assert.equal(requirementsFromForm(draft).fields.outOfTownGuests.source,'Day 1: 400 pax; Day 3: 501 pax; average across 2 days');
+ draft.transfers=['','75',''];assert.equal(requirementsFromForm(draft).fields.outOfTownGuests.value,'75');
+ draft.transfers=['',''];assert.equal(requirementsFromForm(draft).fields.outOfTownGuests.status,'missing');
 });
 
 test('three-column form starts with empty optional inputs and downloads a blank printable layout',()=>{
