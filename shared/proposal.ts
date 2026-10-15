@@ -1,3 +1,4 @@
+import {technicalServiceName,technicalServiceHead} from './serviceHeads.ts';
 import {quantityRateColumns} from './sheetColumns.ts';
 import { totalRoomNights } from './roomNights.ts';
 import * as XLSX from 'xlsx';
@@ -132,6 +133,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     return { name: head.name, headcount, lines, amount: lines.some(l => l.amount !== null) ? money(lines.reduce((sum, l) => sum + (l.amount ?? 0), 0)) : null };
   });
   const extras = requirements.scalingRules.filter(r => !mappedHeads(r.head.value, budget).length).map(r => quote(r.head.value || 'Unnamed requirement', 'No matching sheet row.'));
+  for (const note of requirements.serviceNotes??[]) if (note.name===technicalServiceName && note.text.trim() && !technicalServiceHead(budget) && !extras.some(line=>line.label===note.name)) extras.push(quote(note.name,'No matching sheet row.'));
   extras.push(...requirements.functions.filter(f => /high\s*tea.*ceremon/i.test(f.name.value)).map(f => quote(`${f.day.value} · Small ceremonies`, 'No matching sheet row for the small ceremonies.')));
   if (requirements.fields.rooms.value || requirements.roomNights?.length) {
     const label = 'Accommodation · rooms and nights';

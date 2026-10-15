@@ -1,4 +1,5 @@
 import {costSummary,perGuestLine,midpointShares} from '../shared/costDisplay.ts';
+import {emptyFormLayout,requirementsFromForm,notesForHead} from '../shared/briefFormLayout.ts';
 import {dailyHeadcountOptions} from '../shared/reviewChoices.ts';
 import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
 import { nightlyRooms, totalRoomNights, roomsFromBrief } from '../shared/roomNights.ts';
@@ -16,6 +17,27 @@ import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
 const budget = {sheet:'Overall WIP',heads:[head],unread:[],total:{row:8,name:'Total',cost:1000,nw:0,w:1000}};
+test('technical service aliases attach notes without changing prices, and missing heads stay To quote',()=>{
+ const draft=emptyFormLayout(),r=requirementsFromForm(draft);
+ assert.equal(draft.services[5].name,'Technicals & Production');
+ const other={...head,name:'Other Costs',items:[]};
+ const b={...budget,heads:[other]};
+ const baseline=buildProposal(b,r,{}, {}, {});
+ assert(!baseline.toQuote.some(line=>line.label==='Technicals & Production'));
+ r.serviceNotes=[{name:'Technicals & Production',text:'Use the house sound desk; quoted ₹99 is a note only'}];
+ for(const name of ['Technicals & Production','Technical & Production','Technical','Technicals','Production','AV','Audio Visual','Sound & Light','Sound and Light','Technicals (Light, Sound, Power, Truss & SFX)']){
+  const matched={...b,heads:[other,{...head,name,items:[]}]};
+  assert.deepEqual(notesForHead(r,matched,name),['Technicals & Production: '+r.serviceNotes[0].text]);
+  assert.deepEqual(notesForHead(r,matched,'Other Costs'),[]);
+  const p=buildProposal(matched,r,{}, {}, {});
+  assert(!p.toQuote.some(line=>line.label==='Technicals & Production'));
+  assert.equal(p.total,2000);
+ }
+ const missing=buildProposal(b,r,{}, {}, {});
+ assert.equal(missing.total,baseline.total);
+ assert.equal(missing.toQuote.filter(line=>line.label==='Technicals & Production').length,1);
+ assert.equal(missing.toQuote.find(line=>line.label==='Technicals & Production')?.amount,null);
+});
 test('meal costs use sheet row quantity, high tea uses lunch even if tea guests differ; missing stays To quote', () => {
  const r=requirements(); r.functions[1].guests.value='999';
  const p=buildProposal(budget,r,{'Taj Hotel Expenses':'Dinner: 1000'}, {}, {});
