@@ -1,4 +1,5 @@
 import BriefForm from './BriefFormLayout';
+import {readBriefFormDraft,writeBriefFormDraft,clearBriefFormDraft} from './briefFormDraft';
 import {layoutBriefText,emptyFormLayout,requirementsFromForm} from '../shared/briefFormLayout';
 import { scalingRuleReview, hasScalingRule } from '../shared/scalingRuleReview';
 import { nightlyRooms, totalRoomNights } from '../shared/roomNights';
@@ -27,7 +28,7 @@ export default function BriefReader({ costHeads, budget, onReview, saved }: { sa
   const [client] = useState(() => new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL));
   const [brief, setBrief] = useState(saved?.brief ?? '');
   const [entryMode,setEntryMode]=useState<'paste'|'form'>('paste');
-  const [formDraft,setFormDraft]=useState(emptyFormLayout);
+  const [formDraft,setFormDraft]=useState(readBriefFormDraft);
   const [costingBrief,setCostingBrief]=useState(saved?.brief ?? '');
   const [cityEntry, setCityEntry] = useState<string | null>(saved?.requirements.fields.city.value ?? null);
   const [result, setResult] = useState<Requirements | null>(saved?.requirements ?? null);
@@ -54,7 +55,7 @@ export default function BriefReader({ costHeads, budget, onReview, saved }: { sa
   const rules = result ? heads.filter(name=>!hasScalingRule(name,result,budget)) : [];
   return <section className="brief-reader" aria-label="Brief requirements">
     <div className="brief-tabs" role="tablist" aria-label="Brief entry method">{(['paste','form'] as const).map(mode=><button key={mode} type="button" role="tab" id={`${mode}-brief-tab`} aria-controls={`${mode}-brief-panel`} aria-selected={entryMode===mode} tabIndex={entryMode===mode?0:-1} disabled={busy} onClick={()=>switchEntryMode(mode)} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?'paste':e.key==='End'?'form':mode==='paste'?'form':'paste';switchEntryMode(next);document.getElementById(`${next}-brief-tab`)?.focus();}}}>{mode==='paste'?'Paste client brief':'Fill brief form'}</button>)}</div>
-    <form onSubmit={e => { e.preventDefault(); void read(); }}><div className={`brief-entry ${entryMode==='form'?'form-entry':''}`}><div>{entryMode==='paste'?<div role="tabpanel" id="paste-brief-panel" aria-labelledby="paste-brief-tab"><label htmlFor="brief-text">Paste the brief</label><p>Paste WhatsApp text. The AI reads the brief; your Excel file stays in your browser.</p><textarea id="brief-text" rows={7} maxLength={16000} required value={brief} disabled={busy} onChange={e => { setBrief(e.target.value); setResult(null); setDrivers({}); setError(''); }} placeholder="Paste your event brief here" /></div>:<BriefForm draft={formDraft} busy={busy} onChange={draft=>{setFormDraft(draft);setResult(null);setDrivers({});setError('');}}/>}</div>
+    <form onSubmit={e => { e.preventDefault(); void read(); }}><div className={`brief-entry ${entryMode==='form'?'form-entry':''}`}><div>{entryMode==='paste'?<div role="tabpanel" id="paste-brief-panel" aria-labelledby="paste-brief-tab"><label htmlFor="brief-text">Paste the brief</label><p>Paste WhatsApp text. The AI reads the brief; your Excel file stays in your browser.</p><textarea id="brief-text" rows={7} maxLength={16000} required value={brief} disabled={busy} onChange={e => { setBrief(e.target.value); setResult(null); setDrivers({}); setError(''); }} placeholder="Paste your event brief here" /></div>:<BriefForm draft={formDraft} busy={busy} onClear={()=>{clearBriefFormDraft();setFormDraft(emptyFormLayout());setResult(null);setDrivers({});setError('');}} onChange={draft=>{writeBriefFormDraft(draft);setFormDraft(draft);setResult(null);setDrivers({});setError('');}}/>}</div>
       {entryMode==='paste'&&<label className="brief-field"><span>Event city (optional)</span><input aria-label="Event city" value={cityEntry ?? result?.fields.city.value ?? ''} disabled={busy} onChange={e=>{setCityEntry(e.target.value);setResult(prev=>prev && {...prev,fields:{...prev.fields,city:selectedEventCity(prev.fields.city,e.target.value)}});}} placeholder="Enter the event city"/><small>Your entry takes priority over the brief.</small></label>}</div>
       <div className="brief-actions"><button className="read-brief" type="submit" disabled={busy || (entryMode==='paste' && !inputBrief.trim())}>{busy ? 'Reading the brief…' : 'Read the brief'}</button><small>Up to 30 AI calls per hour across this app. Your brief and edits are not saved.</small></div>
     </form>
