@@ -1,7 +1,7 @@
 import {fieldLabels, missingField, type BriefField, type FieldKey, type Requirements} from './brief.ts';
-import {technicalServiceName,technicalServiceHead} from './serviceHeads.ts';
+import {addedServiceNames,hasServiceAliases,serviceHead} from './serviceHeads.ts';
 import {mapHead} from './proposal.ts';
-export const serviceNames=['Décor','Entertainment','Bartenders','Licenses & Permissions','Design & Collaterals',technicalServiceName,'Photo & Video','Other Costs'] as const;
+export const serviceNames=['Décor','Entertainment','Bartenders','Licenses & Permissions','Design & Collaterals',...addedServiceNames,'Photo & Video','Other Costs'] as const;
 export const functionNames=['Lunch','High Tea','Dinner','After Party'] as const;
 export type FormFunction={name:string;guests:string;custom?:boolean};
 export type FormService={name:string;note:string;custom?:boolean};
@@ -27,5 +27,5 @@ export function layoutBriefText(draft:FormLayoutDraft):string {
 }
 export function notesForHead(requirements:Requirements,budget:{heads:{name:string}[]},head:string):string[] {
   const aliases:Record<string,string>={'Décor':'Decor','Bartenders':'Bar Tenders','Licenses & Permissions':'Licenses','Design & Collaterals':'Graphic Design','Photo & Video':'Photo / Video'};
-  return (requirements.serviceNotes??[]).filter(note=>((note.name===technicalServiceName?technicalServiceHead(budget):mapHead(aliases[note.name]??note.name,budget))?.name??mapHead('Other Costs',budget)?.name)===head).map(note=>`${note.name}: ${note.text}`);
+  return (requirements.serviceNotes??[]).filter(note=>((hasServiceAliases(note.name)?serviceHead(note.name,budget):mapHead(aliases[note.name]??note.name,budget))?.name??mapHead('Other Costs',budget)?.name)===head).map(note=>`${note.name}: ${note.text}`);
 }

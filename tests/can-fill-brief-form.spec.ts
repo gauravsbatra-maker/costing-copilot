@@ -37,7 +37,7 @@ test('added rows remove only themselves, blank additions submit, and browser dra
  await expect(day2.getByLabel('Day 2 - Lunch',{exact:true})).toHaveValue('120');
  await expect(day2.getByLabel('Day 2 - High Tea',{exact:true})).toHaveCount(0);
  await form.getByRole('button',{name:'Add service',exact:true}).click();
- await form.getByLabel('Service name 9',{exact:true}).fill('Gifts');
+ await form.getByLabel('Service name 12',{exact:true}).fill('Gifts');
  await form.locator('tbody[aria-label="Services Mentioned"]').getByRole('button',{name:'Remove',exact:true}).click();
  await food.getByRole('button',{name:'Add function',exact:true}).click();
  await form.getByRole('button',{name:'Add service',exact:true}).click();
@@ -74,7 +74,7 @@ test('three-column form stays optional, preserves notes without pricing them, an
  await form.getByLabel('Décor',{exact:true}).fill(draft.services[0].note);
  await form.locator('tbody[aria-label="Guest Transfers"]').getByRole('button',{name:'Add day',exact:true}).click();await expect(form.getByLabel('Guest Transfers – Day 2',{exact:true})).toHaveValue('');
  await form.getByRole('button',{name:'Add function',exact:true}).click();await form.getByLabel('Function name – Day 1, function 5',{exact:true}).fill('Welcome');await expect(form.getByLabel('Day 1 - Function 5',{exact:true})).toHaveValue('');
- await form.getByRole('button',{name:'Add service',exact:true}).click();await form.getByLabel('Service name 9',{exact:true}).fill('Welcome gifts');await expect(form.getByLabel('Service instructions 9',{exact:true})).toHaveValue('');
+ await form.getByRole('button',{name:'Add service',exact:true}).click();await form.getByLabel('Service name 12',{exact:true}).fill('Welcome gifts');await expect(form.getByLabel('Service instructions 12',{exact:true})).toHaveValue('');
  const downloading=page.waitForEvent('download');await form.getByRole('button',{name:'Download blank brief form'}).click();const download=await downloading;expect(download.suggestedFilename()).toBe('blank-client-brief.html');const stream=await download.createReadStream();let blank='';for await(const part of stream!)blank+=part.toString();expect(blank).not.toContain('Jaipur');expect(blank).toContain('<th>Your details</th>');
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook()});
@@ -131,16 +131,16 @@ test('phone form stacks labels, inputs and complete hints; portrait tip dismisse
 
 test('a full older browser draft keeps all service notes when the new row is added',async({page})=>{
  await page.goto('/');
- const old=emptyFormLayout();old.services=old.services.filter(row=>row.name!=='Technicals & Production');
+ const old=emptyFormLayout();old.services=old.services.filter(row=>!['Technicals & Production','Crew & Manpower','Venue Rentals','Gifting & Giveaways'].includes(row.name));
  while(old.services.length<30)old.services.push({name:`Extra ${old.services.length}`,note:`Keep note ${old.services.length}`,custom:true});
  await page.evaluate(draft=>localStorage.setItem('costing-brief-form-v1',JSON.stringify(draft)),old);
  await page.reload();await page.getByRole('tab',{name:'Fill brief form'}).click();
  const form=page.getByRole('tabpanel',{name:'Fill brief form'});
- await expect(form.locator('tbody[aria-label="Services Mentioned"] textarea')).toHaveCount(31);
+ await expect(form.locator('tbody[aria-label="Services Mentioned"] textarea')).toHaveCount(34);
  await form.getByLabel('Technicals & Production',{exact:true}).fill('Keep the new note too');
  await page.reload();await page.getByRole('tab',{name:'Fill brief form'}).click();
  await expect(form.getByLabel('Technicals & Production',{exact:true})).toHaveValue('Keep the new note too');
- await expect(form.getByLabel('Service instructions 31',{exact:true})).toHaveValue('Keep note 29');
+ await expect(form.getByLabel('Service instructions 34',{exact:true})).toHaveValue('Keep note 29');
 });
 
 for(const technicalHead of ['AV','Venue'])test(`technical service row matches ${technicalHead==='AV'?'an alias':'no sheet head and stays To quote'}`,async({page})=>{
@@ -153,7 +153,7 @@ for(const technicalHead of ['AV','Venue'])test(`technical service row matches ${
  await expect(service).toHaveAttribute('placeholder','Please add quoted rates / special instructions');
  await expect(service.locator('xpath=ancestor::tr')).toContainText('Leave blank if none');
  const names=await form.locator('tbody[aria-label="Services Mentioned"] textarea').evaluateAll(inputs=>inputs.map(input=>input.getAttribute('aria-label')));
- expect(names).toEqual(['Design & Collaterals','Technicals & Production','Photo & Video']);
+ expect(names).toEqual(['Design & Collaterals','Technicals & Production','Crew & Manpower','Venue Rentals','Gifting & Giveaways','Photo & Video']);
  await expect(form.getByLabel('Design & Collaterals',{exact:true})).toHaveValue('Keep this old draft note');
  await service.fill('Use the house sound desk');
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook(technicalHead)});
@@ -170,4 +170,21 @@ for(const technicalHead of ['AV','Venue'])test(`technical service row matches ${
  await expect(page.getByRole('alert')).toHaveCount(0);
  await proposal.getByRole('button',{name:'Review proposal',exact:true}).click();
  await expect(page.getByRole('main',{name:'Proposal review'})).toContainText('Technicals & Production: Use the house sound desk');
+});
+
+for(const [service,alias]of [['Crew & Manpower','Staffing'],['Venue Rentals','Hall Rental'],['Gifting & Giveaways','Hampers']])for(const matched of [true,false])test(`${service} ${matched?'matches its sheet alias':'stays To quote without a sheet match'}`,async({page})=>{
+ await page.goto('/');await page.getByRole('tab',{name:'Fill brief form',exact:true}).click();
+ const form=page.getByRole('tabpanel',{name:'Fill brief form',exact:true});
+ const row=form.getByLabel(service,{exact:true});await expect(row).toHaveValue('');
+ await expect(row).toHaveAttribute('placeholder','Please add quoted rates / special instructions');
+ await expect(row.locator('xpath=ancestor::tr')).toContainText('Leave blank if none');
+ await row.fill('Keep these service instructions');
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook(matched?alias:'Technicals')});
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ const note=proposal.locator('.service-note').filter({hasText:`${service}: Keep these service instructions`});await expect(note).toHaveCount(1);
+ if(matched){await expect(note.locator('xpath=ancestor::div[contains(@class,"proposal-head")]').locator('h3')).toContainText(alias);await expect(proposal.locator('.pricing-status')).not.toContainText(service);}
+ else await expect(proposal.locator('.pricing-status')).toContainText(service);
+ await expect(page.getByRole('alert')).toHaveCount(0);
+ await proposal.getByRole('button',{name:'Review proposal',exact:true}).click();await expect(page.getByRole('main',{name:'Proposal review'})).toContainText(`${service}: Keep these service instructions`);
 });

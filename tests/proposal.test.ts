@@ -17,6 +17,32 @@ import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
 const budget = {sheet:'Overall WIP',heads:[head],unread:[],total:{row:8,name:'Total',cost:1000,nw:0,w:1000}};
+test('crew, venue and gifting service aliases preserve prices and quote only filled unmatched services',()=>{
+ const draft=emptyFormLayout(),r=requirementsFromForm(draft);
+ assert.deepEqual(draft.services.slice(5,9).map(row=>row.name),['Technicals & Production','Crew & Manpower','Venue Rentals','Gifting & Giveaways']);
+ const groups:[string,string[]][]=[
+  ['Crew & Manpower',['Crew','Manpower','Crew & Manpower','Staffing','Event Staff']],
+  ['Venue Rentals',['Venue','Venue Rental','Venue Rentals','Venue Hire','Hall Rental']],
+  ['Gifting & Giveaways',['Gifting','Gifts','Giveaways','Hampers','Favours','Favors','Return Gifts']],
+ ];
+ const b={...budget,heads:[{...head,name:'Other Costs',items:[]}]};
+ const baseline=buildProposal(b,r,{}, {}, {});
+ assert(!baseline.toQuote.some(line=>groups.some(([name])=>line.label===name)));
+ for(const [service,names]of groups)for(const name of names){
+  r.serviceNotes=[{name:service,text:'Keep these instructions; quoted ₹99 is only a note'}];
+  const matched={...b,heads:[...b.heads,{...head,name,items:[]}]};
+  const p=buildProposal(matched,r,{}, {}, {});
+  assert.deepEqual(notesForHead(r,matched,name),[`${service}: ${r.serviceNotes[0].text}`]);
+  assert.deepEqual(notesForHead(r,matched,'Other Costs'),[]);
+  assert(!p.toQuote.some(line=>line.label===service));assert.equal(p.total,2000);
+ }
+ r.serviceNotes=groups.map(([name])=>({name,text:'Quote this separately'}));
+ const missing=buildProposal(b,r,{}, {}, {});
+ assert.equal(missing.total,baseline.total);
+ for(const [name]of groups)assert.equal(missing.toQuote.filter(line=>line.label===name&&line.amount===null).length,1);
+ r.serviceNotes=groups.map(([name])=>({name,text:'   '}));
+ assert(!buildProposal(b,r,{}, {}, {}).toQuote.some(line=>groups.some(([name])=>line.label===name)));
+});
 test('technical service aliases attach notes without changing prices, and missing heads stay To quote',()=>{
  const draft=emptyFormLayout(),r=requirementsFromForm(draft);
  assert.equal(draft.services[5].name,'Technicals & Production');
