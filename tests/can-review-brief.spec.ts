@@ -34,6 +34,7 @@ test('review a simulated brief reply, correct amber fields and preserve the Exce
     [1, 'Food', '', '', '', '', 1000, 600, 400], ['', 'Meal', '', '', '', '', 1000, 600, 400], ['', 'Total', '', '', '', '', 1000, 600, 400],
   ]), 'Overall WIP');
   await workbook.setInputFiles({ name: 'made-up.xlsx', mimeType: 'application/octet-stream', buffer: XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }) });
+  await page.getByRole('combobox',{name:'Use a different column',exact:true}).selectOption('6');
   await page.getByRole('button', { name: /Food Row/ }).click();
   await expect(page.getByRole('row').filter({ hasText: 'Meal' })).toContainText('1,000');
   expect(sent).toHaveLength(1);

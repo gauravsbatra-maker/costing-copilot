@@ -426,7 +426,7 @@ test('cost summary uses existing head order, shares and rounded midpoint figures
  assert.deepEqual(costing,before);
 });
 
-test('quantity and rate labels are detected across both header rows, never after G',()=>{
+test('optional quantity and rate labels across two header rows preserve their basis when G is selected',()=>{
  const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([
  ['Sr No','Cost head',null,null,null,null,'Cost','Qty','Rate'],
  [null,null,'Qty','Days','Total','Rate','W/0 GST','NW','W'],
@@ -434,7 +434,7 @@ test('quantity and rate labels are detected across both header rows, never after
  [null,'Lunch',100,1,100,8,800,99999,99999],
  [null,'Total',null,null,null,null,800,99999,99999]
  ]),'Overall WIP');
- const result=readProposalSheet(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ const result=readProposalSheet(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6);
  const row=result.heads[0].items[0] as {quantity?:number;rate?:number;cost:number|string;row:number};
  assert.equal(row.quantity,100);assert.equal(row.rate,8);assert.equal(row.cost,800);assert.equal(row.row,4);
 });

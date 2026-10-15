@@ -1,4 +1,4 @@
-import {detectSheetHeader} from './sheetHeader.ts';
+import {quantityRateColumns} from './sheetColumns.ts';
 import { totalRoomNights } from './roomNights.ts';
 import * as XLSX from 'xlsx';
 import { readVisibleWorksheet, readCostingWorksheet, type Budget, type CostHead, type CostRow } from './costing.ts';
@@ -18,10 +18,10 @@ export function chosenHeadcount(text:string): number | null {
   const dayTotal=/^Total for the day \(all functions\) · .+: (\d+)$/.exec(text);
   return numberIn(dayTotal?.[1] ?? text);
 }
-export function readProposalSheet(data: ArrayBuffer | Uint8Array, selected?: string): Budget {
+export function readProposalSheet(data: ArrayBuffer | Uint8Array, selected?: string, costColumn?:number): Budget {
   const {sheet, sheetName} = readVisibleWorksheet(data, selected);
-  const budget = readCostingWorksheet(sheet, sheetName);
-  const {quantity:qty,rate} = detectSheetHeader(sheet);
+  const budget = readCostingWorksheet(sheet, sheetName, costColumn);
+  const {quantity:qty,rate} = quantityRateColumns(sheet,budget.reading!.firstDataRow);
   for (const head of budget.heads) for (const item of head.items) {
     const row = item as ProposalRow;
     const q = qty>=0 ? sheet[XLSX.utils.encode_cell({r:item.row-1,c:qty})]?.v : undefined;

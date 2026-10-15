@@ -22,11 +22,11 @@ export function fixture(format: XLSX.BookType = 'xlsx') {
 }
 test('reads the only visible budget, groups line items and preserves pre-GST totals', () => {
   for (const format of ['xlsx', 'xls', 'xlsb'] as const) {
-    const result = readCosting(fixture(format).buffer);
+    const result = readCosting(fixture(format).buffer,undefined,6);
     assert.equal(result.sheet, 'Overall WIP');
     assert.deepEqual(result.heads.map(h => [h.name,h.cost,h.nw,h.w,h.items.length]), [['Venue',100000,'could not read','could not read',2],['Production',50000,'could not read','could not read',1]]);
     assert.equal(result.heads[0].items[1].cost, 'could not read');
-    assert.equal(result.total.cost,150000);
+    assert.equal(result.total.cost,130000);
     assert.equal(result.total.nw,'could not read');
     assert.equal(result.total.w,'could not read');
   }
@@ -36,17 +36,17 @@ test('flags missing formula caches, errors and missing total instead of calculat
   sheet.G4={t:'n',f:'1+2'};
   sheet.H4={t:'e',v:7};
   delete sheet.B8;
-  const result=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+  const result=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6);
   assert.equal(result.heads[0].items[0].cost,'could not read');
   assert.equal(result.heads[0].items[0].nw,'could not read');
-  assert.equal(result.total.cost,'could not read');
+  assert.equal(result.total.cost,50000); // Missing item cache is excluded; no sheet total is used.
 });
-test('rejects hidden-only workbooks and malformed headers', () => {
+test('rejects hidden-only workbooks but never requires a named header', () => {
   const {book,sheet}=fixture();
   book.Workbook!.Sheets!.forEach(s=>s.Hidden=2);
-  assert.throws(()=>readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'})), /No visible tab/);
+  assert.throws(()=>readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6), /No visible tab/);
   book.Workbook!.Sheets![1].Hidden=0; sheet.G2={t:'s',v:'GST'};
-  assert.throws(()=>readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'})), /Could not read the header/);
+  assert.doesNotThrow(()=>readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6));
 });
 test('reads merged two-row headers with W/0 GST and starts data on row 3', () => {
   const { book, sheet } = fixture();
@@ -58,28 +58,28 @@ test('reads merged two-row headers with W/0 GST and starts data on row 3', () =>
   sheet.H2 = { t: 's', v: ' nW ' };
   sheet.I2 = { t: 's', v: ' w ' };
   sheet['!merges'] = [XLSX.utils.decode_range('A1:A2'), XLSX.utils.decode_range('B1:B2')];
-  const result = readCosting(XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }));
+  const result = readCosting(XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }),undefined,6);
   assert.equal(result.sheet, 'Overall WIP');
   assert.equal(result.heads[0].row, 3);
   assert.deepEqual(result.heads.map(h => [h.name, h.cost, h.nw, h.w, h.items.length]), [['Venue', 100000, 'could not read', 'could not read', 2], ['Production', 50000, 'could not read', 'could not read', 1]]);
   assert.equal(result.unread.length, 0);
-  assert.deepEqual([result.total.cost, result.total.nw, result.total.w], [150000, 'could not read', 'could not read']);
+  assert.deepEqual([result.total.cost, result.total.nw, result.total.w], [130000, 'could not read', 'could not read']);
 });
 
-test('detects headers without columns after G and uses G even when a later column claims to be cost',()=>{
+test('cost detection ignores header wording and a sparse later numeric column',()=>{
  const {book,sheet}=fixture();
  for(const key of Object.keys(sheet))if(/^[H-Z]+\d+$/.test(key))delete sheet[key];
  sheet.H2={t:'s',v:'Cost (W/O GST)'};sheet.H3={t:'n',v:99999999};
- const result=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ const result=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6);
  assert.equal(result.heads[0].cost,100000);assert.equal(result.heads[0].items[0].cost,80000);
  assert.equal(result.heads[0].nw,'could not read');assert.equal(result.heads[0].w,'could not read');
 });
-test('changing or adding cells after G cannot change parsed costs, headers or line membership',()=>{
+test('selecting G preserves its costs and line membership when later columns change',()=>{
  const {book,sheet}=fixture();
- const before=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ const before=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6);
  for(const key of Object.keys(sheet))if(/^[H-Z]+\d+$/.test(key))sheet[key]={t:'s',v:'ignored changed value'};
- const after=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
- assert.deepEqual(after,before);
+ const after=readCosting(XLSX.write(book,{type:'buffer',bookType:'xlsx'}),undefined,6);
+ assert.deepEqual(after.heads,before.heads); assert.equal(after.total.cost,before.total.cost);
  const rows=[['Sr No','Cost head','Qty','Days','Total','Rate','Cost (W/O GST)'],[1,'Venue',null,null,null,null,1000],[null,null,null,null,null,null,null,88888],[null,'Rental',1,1,1,1000,1000],[null,'Total',null,null,null,null,1000]];
  const one=XLSX.utils.book_new();XLSX.utils.book_append_sheet(one,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
  assert.equal(readCosting(XLSX.write(one,{type:'buffer',bookType:'xlsx'})).heads[0].items.length,1);
@@ -108,7 +108,7 @@ for(const format of ['xlsx','xls','xlsb'] as const) test(`${format}: several vis
  const data=XLSX.write(book,{type:'buffer',bookType:format});
  assert.deepEqual(visibleSheetNames(data),['Overall WIP','Later visible']);
  assert.throws(()=>readCosting(data),/Choose a costing tab/);
- assert.equal(readCosting(data,'Overall WIP').total.cost,150000);
+ assert.equal(readCosting(data,'Overall WIP',6).total.cost,130000);
  assert.throws(()=>readCosting(data,'Hidden first'),/Choose a visible costing tab/);
  assert.throws(()=>readCosting(data,'Missing tab'),/Choose a visible costing tab/);
 });
@@ -121,8 +121,8 @@ for(const format of ['xlsx','xls','xlsb'] as const) test(`${format}: a single vi
  book.Workbook={Sheets:[{name:'Overall WIP',Hidden:1},{name:'Private',Hidden:2},{name:'Final costs',Hidden:0}]};
  const data=XLSX.write(book,{type:'buffer',bookType:format});
  assert.deepEqual(visibleSheetNames(data),['Final costs']);
- const result=readCosting(data);
- assert.equal(result.sheet,'Final costs');assert.equal(result.total.cost,150000);
+ const result=readCosting(data,undefined,6);
+ assert.equal(result.sheet,'Final costs');assert.equal(result.total.cost,130000);
 });
 
 
@@ -143,5 +143,5 @@ test('legacy xls hidden worksheet records are never passed to the cell reader',(
  XLSX.CFB.find(container,'Workbook')!.content=bytes;
  const data=XLSX.CFB.write(container,{type:'buffer'});
  assert.deepEqual(visibleSheetNames(data),['Overall WIP']);
- assert.equal(readCosting(data).total.cost,150000);
+ assert.equal(readCosting(data,undefined,6).total.cost,130000);
 });

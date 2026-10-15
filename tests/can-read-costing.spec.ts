@@ -17,6 +17,8 @@ test('upload a workbook and expand pre-GST line items without sending the file',
   await expect(page.getByRole('heading',{name:'Final costing'})).toBeVisible();
   await expect(page.getByRole('combobox',{name:'Costing tab'})).toHaveCount(0);
   await expect(page.getByRole('table')).toHaveCount(1);
+  await expect(page.getByText(/Using column I for costs/)).toBeVisible();
+  await page.getByRole('combobox',{name:'Use a different column',exact:true}).selectOption('6');
   await expect(page.getByRole('row').filter({hasText:'Venue'})).toContainText('1,00,000');
   await expect(page.getByText('Hall rental')).toHaveCount(0);
   await page.getByRole('button',{name:/Venue/}).click();
@@ -38,7 +40,7 @@ test('upload a workbook and expand pre-GST line items without sending the file',
 });
 
 
-test('detects a two-row header using only A:G and gives a plain error when no header exists', async ({page})=>{
+test('reads two-row headers and no headers, and reports only a missing numeric column', async ({page})=>{
   const upload=async(rows:unknown[][])=>{
     const book=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
@@ -59,7 +61,10 @@ test('detects a two-row header using only A:G and gives a plain error when no he
   await expect(page.getByRole('columnheader')).toHaveCount(2);
   await expect(page.getByRole('alert')).toHaveCount(0);
   await upload([['Unknown sheet'],[1,'Venue',1000]]);
-  await expect(page.getByRole('alert')).toHaveText("Could not read the header. Please check the sheet's column labels and try again.");
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByText('Using column C for costs, 1 line, ₹1,000 in all',{exact:true})).toBeVisible();
+  await upload([['Names','Values'],['Venue','Not supplied']]);
+  await expect(page.getByRole('alert')).toHaveText('No numeric column found.');
   await expect(page.getByRole('table')).toHaveCount(0);
   await expect(page.getByRole('combobox')).toHaveCount(0);
 });
@@ -84,14 +89,40 @@ test('choose among visible tabs only and use the chosen tab without reading hidd
   await expect(page.getByText("Before uploading: keep only your final costing tab visible and hide all other tabs, for your privacy. Make sure the last column of numbers is your pre-GST total. We read only the visible tab and use its last number column, hidden tabs are never opened.",{exact:true})).toBeVisible();
   await picker.selectOption('Final costing');
   await expect(page.getByRole('heading',{name:'Final costing',exact:true})).toBeVisible();
+  await page.getByRole('combobox',{name:'Use a different column',exact:true}).selectOption('6');
   await expect(page.getByRole('row').filter({hasText:'Decor'})).toContainText('2,000');
   await expect(page.getByText('9,99,999',{exact:true})).toHaveCount(0);
   await picker.selectOption('Budget draft');
   await expect(page.getByRole('heading',{name:'Budget draft',exact:true})).toBeVisible();
+  await page.getByRole('combobox',{name:'Use a different column',exact:true}).selectOption('6');
   await expect(page.getByRole('row').filter({hasText:'Venue'})).toContainText('1,000');
   await expect(page.getByRole('button',{name:/Decor/})).toHaveCount(0);
   await picker.selectOption('');
   await expect(page.getByRole('table')).toHaveCount(0);
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+
+test('header-free column confirmation and picker use the final numeric column and recalculate the readback',async({page})=>{
+ const book=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([
+ ['Venue',null,null,null,null,null,100,null,null,150,99999],
+ ['Decor',null,null,null,null,null,200,null,null,250],
+ ['Transport',null,null,null,null,null,300,null,null,350],
+ ['Subtotal',null,null,null,null,null,600,null,null,750]
+ ]),'Final');
+ let posts=0;page.on('request',request=>{if(request.method()==='POST')posts++;});
+ await page.goto('/');
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+ await expect(page.getByText('Using column J for costs, 3 lines, ₹750 in all',{exact:true})).toBeVisible();
+ const picker=page.getByRole('combobox',{name:'Use a different column',exact:true});
+ await expect(picker.locator('option')).toHaveText(['Column G','Column J','Column K']);
+ await expect(page.getByText('Subtotal',{exact:true})).toHaveCount(0);
+ await picker.selectOption('6');
+ await expect(page.getByText('Using column G for costs, 3 lines, ₹600 in all',{exact:true})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Venue'})).toContainText('100');
+ expect(posts).toBe(0);
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
