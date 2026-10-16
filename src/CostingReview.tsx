@@ -1,6 +1,7 @@
 import {notesForHead} from '../shared/briefFormLayout';
 import PricingStatus from './PricingStatus';
 import CostSummary from './CostSummary';
+import CostPie from './CostPie';
 import {perGuestLine,midpointShares} from '../shared/costDisplay';
 import { useSaveCosting } from './SavedCostings';
 import type { SavedCosting } from '../shared/savedCosting';
@@ -130,6 +131,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
       </div><aside className="invoice-summary"><div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}</div><PricingStatus proposal={proposal}/></div>
       <CostSummary requirements={requirements} costing={contingent} names={proposal.heads.map(head=>head.name)}/>
+      <CostPie costing={contingent} names={proposal.heads.map(head=>head.name)}/>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>
       <button className="read-brief" type="button" disabled={isSaving || !contingent || !generated} onClick={()=>{if(contingent && generated)saveCosting({version:1,brief,budget,requirements,drivers,defaults:contingencyDefaultsByHead,contingencies:linePercentages as Record<string,number>,lines:proposal,priced:contingent,state:{lineEdits,pastTransferGuestsEntry,bases,overrides,useBriefRooms,confirmed,generated,chosenVariance},total:`Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}`});}}>Save this costing</button>
       <p>Only saved costings are kept in your account. The uploaded Excel file is never stored.</p></aside></div>

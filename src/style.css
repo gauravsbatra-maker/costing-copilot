@@ -332,3 +332,12 @@ body:not(:has(.requirements)):not(:has(.proposal-review)) .account-links button 
 @media (width < 1024px) {
  body:not(:has(.requirements)):not(:has(.proposal-review)) .first-page-logo { width: 265px; max-width: calc(100% - 88px); }
 }
+
+.invoice-summary>.cost-pie { order: 2; }
+.cost-pie { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 16px; width: 100%; margin: 0 0 24px; }
+.cost-pie svg { display: block; width: 100%; height: auto; }
+.cost-pie figcaption { min-width: 0; }
+.cost-pie ul { list-style: none; margin: 0; padding: 0; }
+.cost-pie li { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 8px; font-size: 16px; overflow-wrap: anywhere; }
+.cost-pie-key { flex: 0 0 12px; height: 12px; margin-top: 7px; border: 1px solid var(--rule); }
+@media (width < 600px) { .cost-pie { grid-template-columns: minmax(0, 1fr); } }

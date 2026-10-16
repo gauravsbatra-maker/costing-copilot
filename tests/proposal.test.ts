@@ -1,4 +1,5 @@
 import {costSummary,perGuestLine,midpointShares} from '../shared/costDisplay.ts';
+import {costPieSlices} from '../shared/costPie.ts';
 import {emptyFormLayout,requirementsFromForm,notesForHead} from '../shared/briefFormLayout.ts';
 import {dailyHeadcountOptions} from '../shared/reviewChoices.ts';
 import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
@@ -17,6 +18,21 @@ import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
 const budget = {sheet:'Overall WIP',heads:[head],unread:[],total:{row:8,name:'Total',cost:1000,nw:0,w:1000}};
+test('pie uses priced midpoints, keeps the largest six and combines remaining table percentages without changing costs',()=>{
+ const amounts=[0.1,3,75,0.6,10,2,4,0.3,5];
+ const heads=Object.fromEntries(amounts.map((midpoint,index)=>[`Head ${index}`,{percentage:0,reserve:null,range:{low:midpoint,high:midpoint,midpoint}}]));
+ const costing={heads:{...heads,'Unquoted':{percentage:0,reserve:null,range:null},'Zero':{percentage:0,reserve:null,range:{low:0,high:0,midpoint:0}}},total:{low:100,high:100,midpoint:100}};
+ const before=structuredClone(costing),names=Object.keys(costing.heads);
+ const slices=costPieSlices(costing,names);
+ assert.deepEqual(slices.map(slice=>slice.name),['Head 2','Head 4','Head 8','Head 6','Head 1','Head 5','Other']);
+ assert.deepEqual(slices.map(slice=>slice.share),['75.0%','10.0%','5.0%','4.0%','3.0%','2.0%','1.0%']);
+ assert(Math.abs(slices.at(-1)!.midpoint-1)<1e-12);
+ assert.equal(slices.reduce((sum,slice)=>sum+slice.tenths,0),1000);
+ const table=costSummary(requirements(),costing,names);
+ for(const slice of slices.slice(0,6))assert.equal(slice.share,table.find(row=>row.name===slice.name)?.share);
+ assert.deepEqual(costing,before);
+ assert.deepEqual(costPieSlices({...costing,heads:{Unquoted:costing.heads.Unquoted},total:{low:0,high:0,midpoint:0}},['Unquoted']),[]);
+});
 test('crew, venue and gifting service aliases preserve prices and quote only filled unmatched services',()=>{
  const draft=emptyFormLayout(),r=requirementsFromForm(draft);
  assert.deepEqual(draft.services.slice(5,9).map(row=>row.name),['Technicals & Production','Crew & Manpower','Venue Rentals','Gifting & Giveaways']);
