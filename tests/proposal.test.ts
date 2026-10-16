@@ -1,5 +1,6 @@
 import {costSummary,perGuestLine,midpointShares} from '../shared/costDisplay.ts';
 import {costPieSlices} from '../shared/costPie.ts';
+import {serviceHead} from '../shared/serviceHeads.ts';
 import {emptyFormLayout,requirementsFromForm,notesForHead} from '../shared/briefFormLayout.ts';
 import {dailyHeadcountOptions} from '../shared/reviewChoices.ts';
 import {scalingRuleReview,hasScalingRule} from '../shared/scalingRuleReview.ts';
@@ -8,7 +9,7 @@ import { costLabel, costText } from '../shared/displayLabels.ts';
 import { editProposal, applyLineContingencies, lineKey } from '../shared/lineEdits.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parsePastTransferGuests, applyVariance, costRange, variancePercentage, rangeFigure, rawProposal, buildProposal, mealKind, mapHead, readProposalSheet } from '../shared/proposal.ts';
+import { parsePastTransferGuests, applyVariance, costRange, variancePercentage, rangeFigure, rawProposal, buildProposal, mealKind, mapHead, readProposalSheet,matchMeals,foodRowsForFunction,formHeadNeeded } from '../shared/proposal.ts';
 import { validateRequirements } from '../shared/brief.ts';
 import { detailedBrief, detailedExtraction } from './fixtures/brief.ts';
 import { prepareReview, suggestedHeadChoices } from '../shared/reviewChoices.ts';
@@ -18,6 +19,61 @@ import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
 const budget = {sheet:'Overall WIP',heads:[head],unread:[],total:{row:8,name:'Total',cost:1000,nw:0,w:1000}};
+test('Percept dated food rows match by calendar day and meal, with same-day overrides and no All Days meal',()=>{
+ const names=['Mar 4: Arrival Lunch','Mar 4: Hospitality Lounge','Mar 4: Cocktail Reception','Mar 5: Sangeet Night','Mar 6: After Party','All Days: Alcohol & Soft Beverages'];
+ const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([
+  ['Serial','Name','Rate pp','Pax Count','Pre-GST'],['A','Food & Beverages',null,null,6000],...names.map(name=>[null,name,10,100,1000]),['B','Flair Bartenders',null,null,500]
+ ]),'Final');
+ const b=readProposalSheet(XLSX.write(book,{type:'buffer',bookType:'xlsx'}));
+ assert.equal(b.heads[0].items.length,6);assert(b.heads[0].items.every(item=>item.quantity===100));
+ const r=requirements();r.functions=Array.from({length:2},(_,day)=>['Lunch','High Tea','Dinner','After Party'].map(name=>({day:{value:`Day ${day+1}`,status:'corrected' as const,source:'',reason:''},name:{value:name,status:'corrected' as const,source:'',reason:''},guests:{value:'100',status:'corrected' as const,source:'',reason:''}}))).flat();
+ assert.deepEqual(matchMeals(b,r),{0:3,1:4,2:5,3:null,4:null,5:null,6:6,7:null});
+ assert.equal(mealKind('hospitality lounge'),'tea');assert.equal(mealKind('Cocktail'),'dinner');
+ assert.deepEqual(foodRowsForFunction(b,r,4).map(row=>row.row),[6]);
+ const overridden=buildProposal(b,r,{}, {},{4:6});
+ assert.equal(overridden.heads[0].lines[4].original?.row,6);
+ assert.equal(buildProposal(b,r,{}, {},{4:8}).heads[0].lines[4].amount,null);
+ const checks=proposalChecks(b,r,applyVariance(overridden,10,'Test'),{}, {},{}, {4:6});
+ assert(checks.assumptions.some(text=>text.includes('your selected sheet row')));
+ const reversed={...b,heads:[{...b.heads[0],items:[b.heads[0].items[3],...b.heads[0].items.slice(0,3),...b.heads[0].items.slice(4)]}]};
+ assert.deepEqual(matchMeals(reversed,r),matchMeals(b,r));
+ const dayLabels={...b,heads:[{...b.heads[0],items:b.heads[0].items.map(item=>({...item,name:item.name.replace('Mar 4:','Day 1:').replace('Mar 5:','Day 2:').replace('Mar 6:','Day 3:')}))}]};
+ assert.deepEqual(matchMeals(dayLabels,r),matchMeals(b,r));
+});
+test('Flair Bartenders is requested and receives notes through the existing bartender alias',()=>{
+ const b={...budget,heads:[{...head,name:'Flair Bartenders',items:[]}]};
+ const draft=emptyFormLayout();draft.services.find(row=>row.name==='Bartenders')!.note='Required';const r=requirementsFromForm(draft);
+ assert.equal(mapHead('Bar Tenders',b),b.heads[0]);assert(formHeadNeeded(b.heads[0],b,r));
+ assert.deepEqual(notesForHead(r,b,'Flair Bartenders'),['Bartenders: Required']);
+ assert.equal(buildProposal(b,r,{}, {},{}).heads[0].amount,1000);
+});
+test('service words match combined heads first, then existing items, without duplicate gifting charges',()=>{
+ const draft=emptyFormLayout();draft.services.find(row=>row.name==='Gifting & Giveaways')!.note='Welcome gifts';
+ const r=requirementsFromForm(draft);
+ const gifts={...head,name:'Gifts & Hampers',items:[]};
+ const other={...head,name:'Other Costs',row:20,items:[{row:21,name:'Personalised — GIFT hampers',cost:600,nw:0,w:600},{row:22,name:'Travel',cost:400,nw:0,w:400}]};
+ const b={...budget,heads:[other,gifts]};
+ assert.equal(serviceHead('Gifting & Giveaways',b),gifts);
+ const direct=buildProposal(b,r,{}, {},{});
+ assert.equal(direct.heads.find(h=>h.name===gifts.name)!.amount,1000);
+ assert(!direct.toQuote.some(line=>line.label==='Gifting & Giveaways'));
+ const nested={...b,heads:[other]};
+ assert.equal(serviceHead('Gifting & Giveaways',nested),other);
+ const item=buildProposal(nested,r,{}, {},{});
+ assert.equal(item.total,600);assert.equal(item.heads.find(h=>h.name==='Other Costs')!.amount,600);
+ assert(!item.heads.some(h=>h.name==='Gifting & Giveaways'));
+ assert.equal(item.heads[0].lines[0].source,'Overall WIP · Other Costs · row 21');
+ assert.deepEqual(notesForHead(r,{heads:item.heads},'Other Costs'),['Gifting & Giveaways: Welcome gifts']);
+ r.serviceNotes!.push({name:'Other Costs',text:'Also required'});
+ assert.equal(buildProposal(nested,r,{}, {},{}).total,1000);
+ const empty=requirementsFromForm(emptyFormLayout());
+ const noGift={...b,heads:[{...other,items:[]}]};
+ const omitted=buildProposal(noGift,empty,{}, {},{});
+ assert(omitted.notInBrief?.includes('Gifting & Giveaways'));
+ assert(!omitted.heads.some(h=>h.name==='Gifting & Giveaways'));
+ assert(!omitted.toQuote.some(line=>line.label==='Gifting & Giveaways'));
+ for(const [service,name]of [['Gifting & Giveaways','Custom FAVOUR / Give-away hampers'],['Crew & Manpower','Event — staff and crew support'],['Venue Rentals','Main hall & venue rental'],['Technicals & Production','AV / Audio-and-Visual Production package']])assert(serviceHead(service,{heads:[{name}]}));
+});
 test('form-only omissions zero sheet costs and miscellaneous adds exactly the planner amount',()=>{
  const b={...budget,heads:[{...head,name:'Decor',items:[]}]},draft=emptyFormLayout();
  for(const note of ['', '0', 'none']){

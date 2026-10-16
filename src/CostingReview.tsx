@@ -14,7 +14,7 @@ import { proposalChecks } from '../shared/proposalChecks';
 import { useRef, useState, type ReactNode } from 'react';
 import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
-import { chosenHeadcount, applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, formHeadNeeded, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
+import { chosenHeadcount, applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, formHeadNeeded, mapHead, mappedHeads, matchMeals, foodRowsForFunction, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
 export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief, initial }: { initial?: SavedCosting | null; budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
   const {saveCosting,isSaving} = useSaveCosting();
   const reviewButton = useRef<HTMLButtonElement>(null);
@@ -70,7 +70,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   return <section aria-label="Costing review" className="costing-review">
     <h3>Match requirements to sheet rows</h3>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}
     <p>Check each meal’s source. Choose “To quote” when the past row isn’t comparable.</p>
-    {requirements.functions.map((f,i)=><label className="brief-field" key={i}><span>{f.day.value} · {f.name.value}{mealKind(f.name.value)==='tea' ? ' · headcount follows lunch' : ''}</span><select aria-label={`Source for function ${i+1}`} value={matches[i]??''} onChange={e=>setOverrides({...overrides,[i]:e.target.value?Number(e.target.value):null})}><option value="">To quote</option>{food?.items.filter(row=>mealKind(row.name)).map(row=><option key={row.row} value={row.row}>{budget.sheet} · {food.name} · row {row.row} — {row.name}</option>)}</select></label>)}
+    {requirements.functions.map((f,i)=><label className="brief-field" key={i}><span>{f.day.value} · {f.name.value}{mealKind(f.name.value)==='tea' ? ' · headcount follows lunch' : ''}</span><select aria-label={`Source for function ${i+1}`} value={matches[i]??''} onChange={e=>setOverrides({...overrides,[i]:e.target.value?Number(e.target.value):null})}><option value="">To quote</option>{foodRowsForFunction(budget,requirements,i).map(row=><option key={row.row} value={row.row}>{budget.sheet} · {food?.name} · row {row.row} — {row.name}</option>)}</select></label>)}
     <h3>Cost basis for each sheet head</h3>
     <p>Fixed uses the historical head amount. Headcount scales it against your confirmed benchmark.</p>
     {budget.heads.map(h=>{
@@ -130,7 +130,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
       </section>}
       </div><aside className="invoice-summary"><div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}</div><PricingStatus proposal={proposal}/></div>
-      {proposal.notInBrief && <section className="not-in-brief" aria-label="Not in this brief (₹0)"><h3>Not in this brief (₹0)</h3><ul>{proposal.notInBrief.filter(name=>proposal.heads.find(head=>head.name===name)?.amount===0).map(name=><li key={name}>{costLabel(name)}</li>)}</ul></section>}
+      {proposal.notInBrief && <section className="not-in-brief" aria-label="Not in this brief (₹0)"><h3>Not in this brief (₹0)</h3><ul>{proposal.notInBrief.filter(name=>!proposal.heads.some(head=>head.name===name)||proposal.heads.find(head=>head.name===name)?.amount===0).map(name=><li key={name}>{costLabel(name)}</li>)}</ul></section>}
       <CostSummary requirements={requirements} costing={contingent} names={proposal.heads.map(head=>head.name)}/>
       <CostPie costing={contingent} names={proposal.heads.map(head=>head.name)}/>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>

@@ -52,8 +52,8 @@ export function quantityRateColumns(sheet:XLSX.WorkSheet,firstDataRow:number) {
   if(!/^[A-Z]+\d+$/.test(address))continue;
   const {r,c}=XLSX.utils.decode_cell(address);if(r>=firstDataRow)continue;
   const label=normalize((entry as XLSX.CellObject).v);
-  if(['qty','quantity'].includes(label))quantity=c;
-  if(['rate','unitrate','unitcost'].includes(label))rate=c;
+  if(['qty','quantity','paxcount'].includes(label))quantity=c;
+  if(['rate','unitrate','unitcost','ratepp'].includes(label))rate=c;
  }
  return {quantity,rate};
 }

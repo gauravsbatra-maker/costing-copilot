@@ -1,4 +1,4 @@
-import {hasServiceAliases,serviceHead} from './serviceHeads.ts';
+import {addedServiceNames,hasServiceAliases,serviceHead,matchesServiceName} from './serviceHeads.ts';
 import {quantityRateColumns} from './sheetColumns.ts';
 import { totalRoomNights } from './roomNights.ts';
 import * as XLSX from 'xlsx';
@@ -7,7 +7,7 @@ import type { Requirements } from './brief.ts';
 export type ProposalRow = CostRow & { quantity?: number; rate?: number };
 export type Basis = 'fixed' | 'headcount';
 export type Line = { label: string; amount: number | null; source: string | null; original?: ProposalRow; headcount: number | null; calculation: string; pricing?: { quantity: number; unitCost: number; multiplier: number } };
-export type Proposal = { heads: { name: string; headcount: number | null; lines: Line[]; amount: number | null }[]; toQuote: Line[]; total: number;notInBrief?:string[] };
+export type Proposal = { heads: { name: string; headcount: number | null; lines: Line[]; amount: number | null;matchedServices?:string[] }[]; toQuote: Line[]; total: number;notInBrief?:string[] };
 const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 export function numberIn(s: string): number | null {
   const matches = s.match(/\d[\d,]*(?:\.\d+)?/g);
@@ -37,7 +37,7 @@ export function mapHead<T extends {name:string}>(name: string, budget: {heads:T[
   const aliases: [RegExp, RegExp][] = [
     [/^(food|catering|meals|fb|fbandalcohol|foodandalcohol)$/, /taj hotel|food|catering/i], [/^(production|technicals|sound|lighting)$/, /technical|production/i],
     [/^(decor|florals|decoration)$/, /decor/i], [/^(transport|transfers|gueststransfer)$/, /guests transfer/i],
-    [/^(bartenders|bar)$/, /bar tenders/i], [/^(entertainment|artists)$/, /entertainment/i],
+    [/^(bartenders|bar)$/, /bar\s*tender/i], [/^(entertainment|artists)$/, /entertainment/i],
     [/^(licenses|permissions)$/, /licenses/i], [/^(graphicdesign|printables|invitations)$/, /graphic design/i],
     [/^(photography|photo|video|photovideo)$/, /photo.*video/i], [/^(othercosts|miscellaneous)$/, /other costs/i],
   ];
@@ -45,8 +45,8 @@ export function mapHead<T extends {name:string}>(name: string, budget: {heads:T[
   return alias ? budget.heads.find(h => alias[1].test(h.name)) ?? null : null;
 }
 export function mealKind(name: string): string | null {
-  if (/high\s*tea/i.test(name)) return 'tea'; if (/lunch/i.test(name)) return 'lunch';
-  if (/after|afters/i.test(name)) return 'afters'; if (/dinner|sangeet|reception/i.test(name)) return 'dinner';
+  if (/high\s*tea|hospitality\s+lounge/i.test(name)) return 'tea'; if (/lunch/i.test(name)) return 'lunch';
+  if (/after|afters/i.test(name)) return 'afters'; if (/dinner|sangeet|reception|cocktail/i.test(name)) return 'dinner';
   if (/breakfast/i.test(name)) return 'breakfast'; return null;
 }
 export function defaultBasis(rule: string): Basis {
@@ -70,18 +70,34 @@ export function formHeadNeeded(head:CostHead,budget:Budget,r:Requirements):boole
   const aliases:Record<string,string>={'Décor':'Decor','Bartenders':'Bar Tenders','Licenses & Permissions':'Licenses','Design & Collaterals':'Graphic Design','Photo & Video':'Photo / Video'};
   return (r.serviceNotes??[]).some(note=>note.text.trim()&&!/^(?:0(?:\.0+)?|none)$/i.test(note.text.trim()) && (hasServiceAliases(note.name)?serviceHead(note.name,budget):mapHead(aliases[note.name]??note.name,budget))?.name===head.name);
 }
+const allDaysFood=(name:string)=>/^\s*all\s+days\s*:/i.test(name);
+function foodDay(name:string):{key:string;order:number;kind:'day'|'date'}|null {
+ const day=/^\s*Day\s+(\d+)\s*:/i.exec(name);
+ if(day)return {key:`day:${Number(day[1])}`,order:Number(day[1]),kind:'day'};
+ const date=/^\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:,?\s+(\d{4}))?\s*:/i.exec(name);
+ if(!date || Number(date[2])<1 || Number(date[2])>31)return null;
+ const month=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(date[1].slice(0,3).toLowerCase());
+ return {key:`date:${date[3]??''}:${month}:${Number(date[2])}`,order:Number(date[3]??0)*400+month*32+Number(date[2]),kind:'date'};
+}
+export function foodRowsForFunction(budget:Budget,requirements:Requirements,index:number):CostRow[] {
+ const items=mapHead('Food',budget)?.items??[];
+ const days=[...new Map(items.flatMap(item=>{const day=foodDay(item.name);return day?[[day.key,day] as const]:[];})).values()].sort((a,b)=>a.order-b.order);
+ if(!days.length)return items.filter(item=>!allDaysFood(item.name)&&mealKind(item.name));
+ const value=requirements.functions[index]?.day.value??'';
+ const explicit=foodDay(`${value}:`);
+ const briefDays=[...new Set(requirements.functions.map(f=>f.day.value))].sort((a,b)=>(foodDay(`${a}:`)?.order??0)-(foodDay(`${b}:`)?.order??0));
+ const selected=explicit&&days.some(day=>day.key===explicit.key)?explicit:explicit?.kind==='day'&&days[0].kind==='date'?days[explicit.order-1]:!explicit||explicit.kind==='date'?days[briefDays.indexOf(value)]:undefined;
+ return items.filter(item=>!allDaysFood(item.name)&&selected&&foodDay(item.name)?.key===selected.key);
+}
 export function matchMeals(budget: Budget, requirements: Requirements): Record<number, number | null> {
-  const food = mapHead('Food', budget); if (!food) return {};
-  const days = [...new Set(requirements.functions.map(f => f.day.value))];
-  const matched: Record<number, number | null> = {};
-  requirements.functions.forEach((f, index) => {
-    const kind = mealKind(f.name.value);
-    const candidates = food.items.filter(item => kind && mealKind(item.name) === kind);
-    // Chronological function order, not a guessed price or a fuzzy row match.
-    const day = days.indexOf(f.day.value);
-    matched[index] = candidates[day]?.row ?? (candidates.length === 1 ? candidates[0].row : null);
-  });
-  return matched;
+ const food=mapHead('Food',budget);if(!food)return {};
+ const dated=food.items.some(item=>foodDay(item.name));
+ const days=[...new Set(requirements.functions.map(f=>f.day.value))];
+ return Object.fromEntries(requirements.functions.map((f,index)=>{
+  const kind=mealKind(f.name.value);
+  const candidates=(dated?foodRowsForFunction(budget,requirements,index):food.items).filter(item=>!allDaysFood(item.name)&&kind&&mealKind(item.name)===kind);
+  return [index,dated?(candidates.length===1?candidates[0].row:null):(candidates[days.indexOf(f.day.value)]?.row??(candidates.length===1?candidates[0].row:null))];
+ }));
 }
 const money = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 export const rupees = (n: number) => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(n)}`;
@@ -129,18 +145,23 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
         const kind = mealKind(f.name.value);
         const lunches = requirements.functions.filter(l => l.day.value === f.day.value && mealKind(l.name.value) === 'lunch');
         const guests = kind === 'tea' ? (lunches.length === 1 ? numberIn(lunches[0].guests.value) : null) : numberIn(f.guests.value);
-        const row = head.items.find(item => item.row === meals[i]) as ProposalRow | undefined;
+        const row = foodRowsForFunction(budget,requirements,i).find(item => item.row === meals[i]) as ProposalRow | undefined;
         if (!row || !kind) return quote(label, 'No confirmed matching meal row in the sheet.', guests);
         return price(label, head, row, guests !== null && row.quantity ? guests / row.quantity * applyPremium : null, guests, `Sheet pre-GST cost ÷ sheet quantity ${row.quantity ?? 'missing'} × ${guests ?? 'missing'} guests${kind === 'tea' ? ' (same as lunch)' : ''}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`, guests!, row.quantity!);
       });
       // Alcohol is a separate historical line; it is not silently bundled into meals.
       for (const row of head.items.filter(r => /alcohol/i.test(r.name))) lines.push(price(row.name, head, row, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`, basis === 'headcount' ? headcount! : 1, basis === 'headcount' ? benchmark! : 1));
     } else {
-      lines = [price(head.name, head, head, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, `${basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`, basis === 'headcount' ? headcount! : 1, basis === 'headcount' ? benchmark! : 1)];
+      const directNotes=(requirements.serviceNotes??[]).filter(note=>!hasServiceAliases(note.name)||matchesServiceName(note.name,head.name));
+      const itemServices=(requirements.serviceNotes??[]).filter(note=>hasServiceAliases(note.name)&&serviceHead(note.name,budget)?.name===head.name&&!matchesServiceName(note.name,head.name));
+      const selectedItems=requirements.fromBriefForm&&!formHeadNeeded(head,budget,{...requirements,serviceNotes:directNotes})?head.items.filter(item=>itemServices.some(note=>matchesServiceName(note.name,item.name))):[];
+      const rows=selectedItems.length?selectedItems:[head];
+      lines = rows.map(row=>price(row.name, head, row, basis === 'headcount' ? headcount && benchmark ? headcount / benchmark * applyPremium : null : applyPremium, headcount, `${basis === 'fixed' ? 'Fixed historical sheet cost' : `Sheet cost × ${headcount ?? 'missing'} ÷ benchmark ${benchmark ?? 'missing'}`}${applyPremium !== 1 ? ` × ${applyPremium} seasonal premium` : ''}`, basis === 'headcount' ? headcount! : 1, basis === 'headcount' ? benchmark! : 1));
     }
-    return { name: head.name, headcount, lines, amount: lines.some(l => l.amount !== null) ? money(lines.reduce((sum, l) => sum + (l.amount ?? 0), 0)) : null };
+    const matchedServices=addedServiceNames.filter(name=>serviceHead(name,budget)?.name===head.name);
+    return { name: head.name, headcount, lines, amount: lines.some(l => l.amount !== null) ? money(lines.reduce((sum, l) => sum + (l.amount ?? 0), 0)) : null,...(matchedServices.length?{matchedServices}:{}) };
   });
-  const extras = requirements.scalingRules.filter(r => !mappedHeads(r.head.value, budget).length).map(r => quote(r.head.value || 'Unnamed requirement', 'No matching sheet row.'));
+  const extras = requirements.scalingRules.filter(r => !mappedHeads(r.head.value, budget).length && !(hasServiceAliases(r.head.value)&&serviceHead(r.head.value,budget)) && !(requirements.fromBriefForm&&hasServiceAliases(r.head.value)&&!(requirements.serviceNotes??[]).some(note=>note.name===r.head.value&&note.text.trim()&&!/^(?:0(?:\.0+)?|none)$/i.test(note.text.trim())))).map(r => quote(r.head.value || 'Unnamed requirement', 'No matching sheet row.'));
   for (const note of requirements.serviceNotes??[]) if (hasServiceAliases(note.name) && note.text.trim() && !serviceHead(note.name,budget) && !extras.some(line=>line.label===note.name)) extras.push(quote(note.name,'No matching sheet row.'));
   extras.push(...requirements.functions.filter(f => /high\s*tea.*ceremon/i.test(f.name.value)).map(f => quote(`${f.day.value} · Small ceremonies`, 'No matching sheet row for the small ceremonies.')));
   if (requirements.fields.rooms.value || requirements.roomNights?.length) {
@@ -177,7 +198,7 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     heads.push({name:'Miscellaneous',headcount:null,lines:[line],amount:line.amount});
   }
   for (const h of heads) h.amount = h.lines.some(l=>l.amount!==null) ? money(h.lines.reduce((sum,l)=>sum+(l.amount??0),0)) : null;
-  return { heads, toQuote: heads.flatMap(h => h.lines).filter(l => l.amount === null), total: money(heads.flatMap(h => h.lines).reduce((sum, l) => sum + (l.amount ?? 0), 0)),...(requirements.fromBriefForm?{notInBrief:[...new Set([...budget.heads.filter(head=>!formHeadNeeded(head,budget,requirements)).map(head=>head.name),...heads.filter(head=>head.lines.every(line=>line.amount===0&&line.calculation==='Not in this brief (₹0)')).map(head=>head.name)])]}:{}) };
+  return { heads, toQuote: heads.flatMap(h => h.lines).filter(l => l.amount === null), total: money(heads.flatMap(h => h.lines).reduce((sum, l) => sum + (l.amount ?? 0), 0)),...(requirements.fromBriefForm?{notInBrief:[...new Set([...addedServiceNames.filter(name=>!serviceHead(name,budget)&&!(requirements.serviceNotes??[]).some(note=>note.name===name&&note.text.trim()&&!/^(?:0(?:\.0+)?|none)$/i.test(note.text.trim()))),...budget.heads.filter(head=>!formHeadNeeded(head,budget,requirements)).map(head=>head.name),...heads.filter(head=>head.lines.every(line=>line.amount===0&&line.calculation==='Not in this brief (₹0)')).map(head=>head.name)])]}:{}) };
 }
 export type RangedProposal = Proposal & { variancePercentage: number; varianceSource: string };
 export function variancePercentage(text: string): number | null {

@@ -127,3 +127,22 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  await page.reload();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await expect(raw).toHaveCount(0);await expect(page.getByLabel('Paste the brief')).toHaveValue('');
 });
+
+test('Percept meal dropdowns stay on the dated day and preserve selected-row overrides; Flair Bartenders matches',async({page})=>{
+ const names=['Mar 4: Arrival Lunch','Mar 4: Hospitality Lounge','Mar 4: Cocktail Reception','Mar 5: Sangeet Night','Mar 6: After Party','All Days: Alcohol & Soft Beverages'];
+ const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Serial','Name','Rate pp','Pax Count','Pre-GST'],['A','Food & Beverages',null,null,6000],...names.map(name=>[null,name,10,100,1000]),['B','Flair Bartenders',null,null,500]]),'Final');
+ await page.goto('/');await page.getByLabel('Bartenders',{exact:true}).fill('Required');
+ await page.getByRole('button',{name:'Add day for Food & Beverage',exact:true}).click();
+ for(const day of [1,2])for(const name of ['Lunch','High Tea','Dinner','After Party'])await page.getByLabel(`Day ${day} - ${name}`,{exact:true}).fill('100');
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ for(const [index,value]of ['3','4','5','','','','6',''].entries())await expect(page.getByLabel(`Source for function ${index+1}`,{exact:true})).toHaveValue(value);
+ await expect(page.getByLabel('Source for function 4',{exact:true}).locator('option')).toHaveText(['To quote',...names.slice(0,3).map((name,i)=>`Final · Food & Beverages · row ${i+3} — ${name}`)]);
+ await expect(page.getByLabel('Source for function 5',{exact:true}).locator('option')).toHaveText(['To quote','Final · Food & Beverages · row 6 — Mar 5: Sangeet Night']);
+ await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(proposal.getByRole('heading',{name:/^Flair Bartenders ·/})).toContainText('midpoint ₹500');
+ await page.getByLabel('Source for function 5',{exact:true}).selectOption('6');await page.getByRole('button',{name:'Cost it',exact:true}).click();
+ const food=proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Food & Beverages ·/})});
+ await expect(food.locator('.proposal-line').nth(4)).toContainText('Final · Food & Beverages · row 6');
+ await expect(proposal.getByRole('region',{name:'Check before you send'})).toContainText('your selected sheet row');
+});

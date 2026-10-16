@@ -211,3 +211,32 @@ for(const [service,alias]of [['Crew & Manpower','Staffing'],['Venue Rentals','Ha
  await expect(page.getByRole('alert')).toHaveCount(0);
  await proposal.getByRole('button',{name:'Review proposal',exact:true}).click();await expect(page.getByRole('main',{name:'Proposal review'})).toContainText(`${service}: Keep these service instructions`);
 });
+
+for(const nested of [false,true])test(`gifting matches ${nested?'an existing Other Costs item':'Gifts & Hampers'} without a second head`,async({page})=>{
+ const book=XLSX.read(workbook(nested?'Technicals':'Gifts & Hampers'),{type:'buffer'});
+ if(nested){
+  const rows=XLSX.utils.sheet_to_json<unknown[]>(book.Sheets['Overall WIP'],{header:1});
+  const at=rows.findIndex(row=>row[1]==='Other Costs');
+  rows.splice(at+1,0,[null,'Gift bags & hampers',null,null,null,null,600,0,600],[null,'Delivery mileage',null,null,null,null,400,0,400]);
+  book.Sheets['Overall WIP']=XLSX.utils.aoa_to_sheet(rows);
+ }
+ await page.goto('/');await page.getByLabel('Gifting & Giveaways',{exact:true}).fill('Welcome hampers');
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ await expect(proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Gifting & Giveaways ·/})})).toHaveCount(0);
+ await expect(proposal.locator('.proposal-total')).toContainText(`midpoint ₹${nested?'600':'1,000'}`);
+ await expect(proposal.locator('.pricing-status')).not.toContainText('Gifting');
+ const owner=proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:nested?/^Other Costs ·/:/^Gifts & Hampers ·/})});
+ await expect(owner).toContainText('Gifting & Giveaways: Welcome hampers');
+ if(nested)await expect(owner).toContainText('Gift bags & hampers');
+ await proposal.getByRole('button',{name:'Review proposal',exact:true}).click();await expect(page.getByRole('main',{name:'Proposal review'})).toContainText('Gifting & Giveaways: Welcome hampers');
+});
+test('missing gifting with a blank row is listed only as not in this brief',async({page})=>{
+ await page.goto('/');await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook()});
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ await expect(proposal.getByRole('region',{name:'Not in this brief (₹0)'})).toContainText('Gifting & Giveaways');
+ await expect(proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Gifting & Giveaways ·/})})).toHaveCount(0);
+ await expect(proposal.locator('.pricing-status')).not.toContainText('Gifting');
+});
