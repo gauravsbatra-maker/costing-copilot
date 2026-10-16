@@ -315,3 +315,17 @@ h1 { font-size: 56px; line-height: 1.12; letter-spacing: -.025em; }
 .brand-working, main:has(.requirements) .brand-brief { display: none; }
 main:has(.requirements) .brand-working { display: block; }
 @media (width < 600px) { .brand-logo { width: 200px; } }
+
+.first-page-logo, .working-title { display: none; }
+.account-links { display: contents; }
+main:has(.requirements) .brief-title { display: none; }
+main:has(.requirements) .working-title { display: inline; }
+body:not(:has(.requirements)):not(:has(.proposal-review)) .account-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+body:not(:has(.requirements)):not(:has(.proposal-review)) .first-page-logo { display: block; margin-bottom: 0; flex-shrink: 0; }
+body:not(:has(.requirements)):not(:has(.proposal-review)) .account-links { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px; }
+body:not(:has(.requirements)):not(:has(.proposal-review)) .account-links button { white-space: nowrap; }
+@media (width >= 1024px) {
+ body:not(:has(.requirements)):not(:has(.proposal-review)) .first-page-logo { width: 520px; }
+ main:not(.proposal-review):not(:has(.requirements)) header { max-width: none; container-type: inline-size; }
+ main:not(.proposal-review):not(:has(.requirements)) h1 { font-size: min(56px, 4.6cqw); white-space: nowrap; text-wrap: nowrap; }
+}
