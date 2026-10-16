@@ -65,7 +65,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const food = mapHead('Food',budget);
   const transfers = mapHead('Transfers',budget);
   const matches = {...matchMeals(budget,requirements),...overrides};
-  const validSheet = budget.heads.length === 10;
+  const validSheet = budget.heads.length >= 1;
   const benchmarkNeeded = budget.heads.some(h => formHeadNeeded(h,budget,requirements) && h.row !== transfers?.row && selectedBases[h.name] === 'headcount') && numberIn(requirements.fields.benchmarkHeadcount.value) === null;
   return <section aria-label="Costing review" className="costing-review">
     <h3>Match requirements to sheet rows</h3>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}
@@ -97,7 +97,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
     <button className="read-brief" type="button" disabled={cityRequired||!confirmed||uncertain>0||needed>0||!validSheet||benchmarkNeeded||percentage===null} onClick={generate}>Cost it</button>
     {percentage===null&&<p className="amber">Enter a variance percentage to cost this.</p>}
     {benchmarkNeeded&&<p className="amber">Enter the benchmark headcount to scale costs.</p>}
-    {!validSheet&&<p className="amber">We found {budget.heads.length} of the 10 heads. Upload the full costing tab to cost this.</p>}
+    {!validSheet&&<p className="amber">We found no cost heads. Upload the costing tab.</p>}
     {(uncertain>0||needed>0)&&<p className="amber">Settle {uncertain} unclear fields and pick a headcount for {needed} heads to cost this.</p>}
     {proposal&&<section aria-label="Costed proposal"><h2>Costed first-pass proposal</h2>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}<button className="add-detail" type="button" ref={reviewButton} onClick={()=>{if(checks && originalProposal) { onReview(<ProposalReview sourceSheet={budget.sheet} brief={brief} requirements={requirements} proposal={proposal} original={originalProposal} contingent={contingent} checks={checks} edits={lineEdits} percentages={linePercentages} defaults={contingencyDefaultsByHead} onBack={()=>{onReview(null);requestAnimationFrame(()=>reviewButton.current?.focus());}}/>); window.scrollTo(0,0); requestAnimationFrame(()=>document.querySelector<HTMLElement>('.proposal-review h1')?.focus()); }}}>Review proposal</button><p>Pre-GST only. To quote lines are excluded from the total.</p><p>Range: ±{proposal.variancePercentage}% · {proposal.varianceSource}</p>
       <div className="invoice-layout"><div className="invoice-items">{proposal.heads.map(h=><div className="proposal-head" key={h.name}><h3>{costLabel(h.name)} · {contingent ? contingencyFigure(contingent.heads[h.name].range) : 'Check contingency percentage'}</h3>{shares[h.name]&&<small className="head-share">{shares[h.name]}</small>}{notesForHead(requirements,budget,h.name).map((note,i)=><p className="service-note" key={i}>{note}</p>)}<p>Headcount: {h.headcount??'per function / not set'}</p>{h.lines.map((l,i)=>{

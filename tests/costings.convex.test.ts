@@ -2,8 +2,25 @@ import {test,expect,vi} from 'vitest';
 import {convexTest} from 'convex-test';
 import schema from '../convex/schema';
 import {api} from '../convex/_generated/api';
+import {readSavedCosting} from '../shared/savedCosting';
 const modules=import.meta.glob('../convex/**/*.ts');
 const snapshot=JSON.stringify({version:1,defaults:{Transfers:10},contingencies:{Transfers:20},lines:{heads:[]},priced:{total:{midpoint:110}},brief:'Invented celebration',budget:{heads:Array.from({length:10},(_,i)=>({name:`Head ${i}`}))},requirements:{fields:{city:{value:'Invented city'}}},drivers:{Decor:'Dinner: 100'},state:{lineEdits:{Decor:{contingency:'20'}},pastTransferGuestsEntry:'60',bases:{},overrides:{},useBriefRooms:true,confirmed:true,chosenVariance:'',generated:{signature:'invented',proposal:{heads:[]}}},total:'Pre-GST total (priced lines only): ₹100–₹120 · midpoint ₹110'});
+test('budgets with one or thirteen heads save and reopen unchanged, while zero heads are rejected',async()=>{
+ const t=convexTest(schema,modules);
+ const owner=await t.run(ctx=>ctx.db.insert('users',{email:'heads@example.test'}));
+ const user=t.withIdentity({subject:owner});
+ for(const count of [1,13]){
+  const copy=JSON.parse(snapshot);copy.brief=`Invented ${count}-head event`;
+  copy.budget.heads=Array.from({length:count},(_,i)=>({name:`Head ${i}`}));
+  const json=JSON.stringify(copy),id=await user.mutation(api.costings.save,{snapshot:json});
+  const reopened=await user.query(api.costings.get,{id});
+  expect(reopened).toBe(json);
+  expect(readSavedCosting(reopened!).budget.heads).toHaveLength(count);
+ }
+ const empty=JSON.stringify({...JSON.parse(snapshot),budget:{heads:[]}});
+ expect(()=>readSavedCosting(empty)).toThrow('incomplete');
+ await expect(user.mutation(api.costings.save,{snapshot:empty})).rejects.toThrow('incomplete');
+});
 test('saved costings are private to their owner, including direct links',async()=>{
  const t=convexTest(schema,modules);
  const [alice,bob]=await t.run(async ctx=>[await ctx.db.insert('users',{email:'alice@example.test'}),await ctx.db.insert('users',{email:'bob@example.test'})]);

@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import {readVisibleWorksheet} from './visibleWorksheets.ts';
 export {visibleSheetNames,readVisibleWorksheet} from './visibleWorksheets.ts';
-import {detectSheetColumns,isTotalRow,sheetFigure} from './sheetColumns.ts';
+import {detectSheetColumns,isTotalRow,sheetFigure,isSerialMarker} from './sheetColumns.ts';
 
 export type Figure = number | 'could not read';
 // Empty legacy fields keep old saved copies compatible. They are not used for pricing.
@@ -17,16 +17,16 @@ export function readCostingWorksheet(sheet:XLSX.WorkSheet,sheetName:string,selec
  const {nameColumn,costColumn,numericColumns,firstDataRow,rows}=detectSheetColumns(sheet,selectedColumn);
  const heads:CostHead[]=[];
  let current:CostHead|undefined;
- const hasNumberedHeads=rows.some(([r,cells])=>r>=firstDataRow && [...cells].some(([c,cell])=>c<nameColumn && typeof sheetFigure(cell)==='number' && Number.isInteger(sheetFigure(cell)) && Number(cell.v)>0) && typeof cells.get(nameColumn)?.v==='string');
+ const hasNumberedHeads=rows.some(([r,cells])=>r>=firstDataRow && [...cells].some(([c,cell])=>c<nameColumn && isSerialMarker(cell)) && typeof cells.get(nameColumn)?.v==='string');
  for(const [r,cells] of rows){
   if(r<firstDataRow)continue;
   const raw=cells.get(nameColumn);
-  if(raw?.t==='e' || typeof raw?.v!=='string' || !raw.v.trim() || typeof sheetFigure(raw)==='number')continue;
+  if(raw?.t==='e' || typeof raw?.v!=='string' || !raw.v.trim() || typeof sheetFigure(raw)==='number' || isSerialMarker(raw))continue;
   const name=raw.v.trim();if(isTotalRow(name))continue;
+  const numbered=[...cells].some(([c,cell])=>c<nameColumn && isSerialMarker(cell));
   const amountCell=cells.get(costColumn);
-  if(![...cells.values()].some(cell=>typeof sheetFigure(cell)==='number') && !amountCell?.f && amountCell?.v===undefined)continue;
+  if(!numbered && ![...cells.values()].some(cell=>typeof sheetFigure(cell)==='number') && !amountCell?.f && amountCell?.v===undefined)continue;
   const row:CostRow={row:r+1,name,cost:sheetFigure(cells.get(costColumn)),nw:'could not read',w:'could not read'};
-  const numbered=[...cells].some(([c,cell])=>c<nameColumn && typeof sheetFigure(cell)==='number' && Number.isInteger(sheetFigure(cell)) && Number(cell.v)>0);
   if(!hasNumberedHeads || numbered){current={...row,items:[]};heads.push(current);}
   else if(current)current.items.push(row);
   else {current={...row,items:[]};heads.push(current);}

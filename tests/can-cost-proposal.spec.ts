@@ -3,6 +3,23 @@ import {test,expect} from '@playwright/test';
 import * as XLSX from 'xlsx';
 import {validateRequirements} from '../shared/brief';
 import {detailedBrief,detailedExtraction} from './fixtures/brief';
+test('a thirteen-head budget can be confirmed and costed; only an empty budget is blocked',async({page})=>{
+ const rows=[['Serial','Head','Pre-GST'],...Array.from({length:13},(_,i)=>[i+1,i===0?'Decor':`Head ${i+1}`,1000])];
+ const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Final');
+ await page.goto('/');
+ await page.getByLabel('Décor',{exact:true}).fill('Required');
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
+ await page.getByLabel('Variance',{exact:true}).fill('10%');
+ await expect(page.getByRole('button',{name:'Confirm all',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Costed proposal',exact:true}).locator('.proposal-total')).toContainText('midpoint ₹1,000');
+ await expect(page.getByText(/of the 10 heads/)).toHaveCount(0);
+ const empty=XLSX.utils.book_new();XLSX.utils.book_append_sheet(empty,XLSX.utils.aoa_to_sheet([[1],[2]]),'Final');
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'empty-heads.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(empty,{type:'buffer',bookType:'xlsx'})});
+ await expect(page.getByText('We found no cost heads. Upload the costing tab.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Confirm all',exact:true})).toBeDisabled();
+});
 test('confirm requirements, choose ten headcounts, price from sheet rows and clear stale proposals',async({page})=>{
  let actionCalls=0;
  await page.addInitScript(()=>{const original=File.prototype.arrayBuffer; (window as unknown as {sheetReads:number}).sheetReads=0; File.prototype.arrayBuffer=function(){(window as unknown as {sheetReads:number}).sheetReads++;return original.call(this);};});
