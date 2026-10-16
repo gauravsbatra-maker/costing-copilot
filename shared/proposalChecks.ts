@@ -10,6 +10,7 @@ export type ProposalChecks = { assumptions: string[]; summary: string[]; missing
 
 // Explain the existing result only. Never calculate or change a price here.
 export function proposalChecks(budget: Budget, requirements: Requirements, proposal: RangedProposal, drivers: Record<string, string>, bases: Record<string, Basis>, editedBases: Record<string, Basis> = {}, overrides: Record<number, number | null> = {}, pastTransferGuests: number | null = null, contingencies: Record<string, ContingencyChoice> = {}, lineContingencies: Record<string, ContingencyChoice> = {}): ProposalChecks {
+  const notInBrief=new Set((proposal.notInBrief??[]).filter(name=>proposal.heads.find(head=>head.name===name)?.amount===0));
   const checks: ProposalChecks = { assumptions: [], summary: [], missing: [], uncertain: [] };
   const food = mapHead('Food', budget)?.name ?? 'Unmatched requirements (food)';
   const transfers = mapHead('Transfers', budget)?.name ?? 'Unmatched requirements (transfers)';
@@ -17,8 +18,8 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
   const accommodation = `${accommodationHead} (accommodation)`;
   const choices = suggestedHeadChoices(budget, requirements);
   const validPastCount = pastTransferGuests !== null && Number.isSafeInteger(pastTransferGuests) && pastTransferGuests > 0;
-  if (mapHead('Transfers', budget) && !validPastCount) checks.missing.push(`${transfers} — Guests the past transfers covered: missing or invalid. Enter a positive whole guest count; transfers are To quote and excluded from the total.`);
-  if (!requirements.functions.length) checks.missing.push(`${food} — Functions and guest counts: missing. Confirm the event schedule before sending.`);
+  if (mapHead('Transfers', budget) && !notInBrief.has(transfers) && !validPastCount) checks.missing.push(`${transfers} — Guests the past transfers covered: missing or invalid. Enter a positive whole guest count; transfers are To quote and excluded from the total.`);
+  if (!requirements.functions.length && !notInBrief.has(food)) checks.missing.push(`${food} — Functions and guest counts: missing. Confirm the event schedule before sending.`);
   const affectedField = (key: FieldKey): string => {
     if (key === 'outOfTownGuests') return transfers;
     if (key === 'rooms' || key === 'nights' || key === 'roomRate') return accommodation;
@@ -32,6 +33,8 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
   };
   for (const key of Object.keys(fieldLabels) as FieldKey[]) {
     if(requirements.roomNights && (key==='rooms'||key==='nights'))continue;
+    if(notInBrief.has('Guest Rooms') && /^(rooms|nights|roomRate)$/.test(key))continue;
+    if(notInBrief.has(transfers) && key==='outOfTownGuests')continue;
     const field = requirements.fields[key];
     missing(affectedField(key), fieldLabels[key], field);
     // A placeholder entered by the planner is still not a named event city.
@@ -62,6 +65,7 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
     }
   }
   for (const h of budget.heads) {
+    if(notInBrief.has(h.name))continue;
     if (h.name === transfers) {
       checks.assumptions.push(`${transfers} — Transfers use ${requirements.fields.outOfTownGuests.value || 'the missing out-of-town count'} out-of-town guests; past transfers covered ${validPastCount ? pastTransferGuests : 'an unconfirmed number of'} guests. The sheet transfer cost is scaled by these two counts, not the historical event guest count. Any existing seasonal increase still applies.`);
       continue;
@@ -90,7 +94,7 @@ export function proposalChecks(budget: Budget, requirements: Requirements, propo
       checks.assumptions.push(`${food} — ${line.label}: ${Object.hasOwn(overrides, index) ? 'your selected sheet row' : 'matched by meal type and day order'}, ${line.source}. Check that the past meal is comparable.${mealKind(f.name.value) === 'tea' ? ' High tea uses the same day’s lunch headcount; small ceremonies are not included in the food price.' : ''}`);
     }
   });
-  for (const head of proposal.heads) for (const line of head.lines) {
+  for (const head of proposal.heads.filter(head=>!notInBrief.has(head.name))) for (const line of head.lines) {
     if (line.source?.startsWith('Client brief')) checks.assumptions.push(`${head.name} — ${line.label}: uses your reviewed brief’s room count, room rate and nights, accepted when you confirmed. No further seasonal increase is added to this quoted room rate.`);
     if (line.amount === null || !line.source) {
       checks.uncertain.push(`${head.name} — ${line.label}: ${line.amount === null ? 'To quote; excluded from the total.' : 'No matching source row is recorded; check this cost.'} ${line.calculation}`);
@@ -133,6 +137,7 @@ function assumptionSummary(budget: Budget, requirements: Requirements, proposal:
   const choices = suggestedHeadChoices(budget, requirements);
   const roomHead = proposal.heads.find(h => h.lines.some(l => l.source?.startsWith('Client brief')))?.name;
   for (const h of budget.heads) {
+    if(proposal.notInBrief?.includes(h.name)&&proposal.heads.find(head=>head.name===h.name)?.amount===0)continue;
     const actual = proposal.heads.find(p => p.name === h.name);
     const guests = actual?.headcount;
     if (h.name === transfers) {

@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 import { inventedBrief } from './fixtures/brief';
 test('read a made-up WhatsApp brief through Convex and OpenAI, flag missing fields and edit in memory', async ({ page }) => {
   test.setTimeout(75000);
-  await page.goto('/');
-  await page.getByLabel('Paste the brief').fill(inventedBrief);
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
+  await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(inventedBrief);
   await page.getByRole('button', { name: 'Read the brief', exact: true }).click();
   const errors = page.getByRole('alert').filter({ hasNot: page.getByRole('heading', { name: 'Headcounts differ' }) });
   await expect(page.getByRole('heading', { name: 'Review the requirements' }).or(errors).first()).toBeVisible({ timeout: 65000 });
@@ -25,15 +25,15 @@ test('read a made-up WhatsApp brief through Convex and OpenAI, flag missing fiel
   await expect(page.getByLabel('Seasonal premium', { exact: true })).toHaveValue('No premium confirmed by project head');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: '/tmp/brief-reader-mobile.png', fullPage: true });
-  await page.reload();
+  await page.reload();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
   await expect(page.getByLabel('Paste the brief')).toHaveValue('');
   await expect(page.getByRole('heading', { name: 'Review the requirements' })).toHaveCount(0);
 });
 test('real AI keeps the event city amber when Mumbai describes guests and the benchmark', async ({ page }) => {
   test.setTimeout(75000);
   const { hometownBrief } = await import('./fixtures/brief');
-  await page.goto('/');
-  await page.getByLabel('Paste the brief').fill(hometownBrief);
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
+  await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(hometownBrief);
   await page.getByRole('button', { name: 'Read the brief', exact: true }).click();
   const errors = page.getByRole('alert').filter({ hasNot: page.getByRole('heading', { name: 'Headcounts differ' }) });
   await expect(page.getByRole('heading', { name: 'Review the requirements' }).or(errors).first()).toBeVisible({ timeout: 65000 });
@@ -53,8 +53,8 @@ test('real AI fills the detailed two-day brief with eight functions and four sca
   test.setTimeout(75000);
   const { detailedBrief, detailedExtraction } = await import('./fixtures/brief');
   const expected = detailedExtraction();
-  await page.goto('/');
-  await page.getByLabel('Paste the brief').fill(detailedBrief);
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
+  await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(detailedBrief);
   await page.getByRole('button', { name: 'Read the brief', exact: true }).click();
   const errors = page.getByRole('alert').filter({ hasNot: page.getByRole('heading', { name: 'Headcounts differ' }) });
   await expect(page.getByRole('heading', { name: 'Review the requirements' }).or(errors).first()).toBeVisible({ timeout: 65000 });
@@ -96,7 +96,7 @@ test('event city auto-fills from a named event city and planner input wins befor
  const { validateRequirements } = await import('../shared/brief');
  const r=validateRequirements(inventedExtraction(),inventedBrief);
  await page.route('**/api/action',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'success',value:r})}));
- await page.goto('/');await page.getByLabel('Paste the brief').fill(inventedBrief);
+ await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(inventedBrief);
  await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await expect(page.getByLabel('Event city',{exact:true})).toHaveValue('Jaipur');
  await expect(page.getByLabel('City',{exact:true})).toHaveValue('Jaipur');

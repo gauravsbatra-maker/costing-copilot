@@ -167,6 +167,6 @@ test('three-column form starts with empty optional inputs and downloads a blank 
  assert.deepEqual(form.food[0].map(row=>row.guests),['','','','']);
  assert(form.services.every(row=>row.note===''));
  assert.match(printableBlankBrief,/<th>Section<\/th><th>Row<\/th><th>Your details<\/th>/);
- assert.equal((printableBlankBrief.match(/<td><\/td><\/tr>/g)??[]).length,20);
+ assert.equal((printableBlankBrief.match(/<td><\/td><\/tr>/g)??[]).length,21);
  assert(!printableBlankBrief.includes('<input'));
 });

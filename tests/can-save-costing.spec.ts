@@ -11,7 +11,7 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  heads.forEach((name,i)=>{rows.push([i+1,name,null,null,null,null,1000,0,1000]);if(i===0)rows.push([null,'Oct 24 - Lunch',100,1,100,8,800,0,800],[null,'Oct 24 - Sangeet',100,1,100,2,200,0,200],[null,'Oct 25 - High Tea',100,1,100,5,500,0,500]);});
  rows.push([null,'Total',null,null,null,null,10000,0,10000]);
  const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
- await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click(); await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
 
  await expect(page.getByLabel('Headcount driving Food & beverage',{exact:true})).toBeVisible();
@@ -49,7 +49,7 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await expect(page.getByRole('status')).toHaveText('Costing saved.',{timeout:30000});
  await page.getByRole('button',{name:'Sign out',exact:true}).click();
  await expect(page.getByRole('button',{name:'Sign out',exact:true})).toHaveCount(0);
- await page.reload();
+ await page.reload();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
  await page.getByRole('button',{name:'My costings',exact:true}).click();
  await page.getByLabel('Email',{exact:true}).fill(email);
  await page.getByLabel('Password',{exact:true}).fill(password);
@@ -87,7 +87,7 @@ test('anonymous costing, private save, sign out and sign back in preserves edits
  await panel.getByRole('button',{name:'Delete',exact:true}).last().click();
  await expect(panel.locator('li')).toHaveCount(1);
  await expect(panel.locator('li p')).toHaveText(newerTotal);
- await page.reload();
+ await page.reload();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
  await page.getByRole('button',{name:'My costings',exact:true}).click();
  await expect(panel.locator('li')).toHaveCount(1);
  console.log('MY COSTINGS AFTER DELETE\n'+await panel.innerText()+'\nEND MY COSTINGS');

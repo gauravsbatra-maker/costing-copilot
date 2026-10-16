@@ -13,7 +13,7 @@ test('nightly rooms prefill, sum, edit and add a night, and price from total roo
  heads.forEach((name,i)=>{rows.push([i+1,name,null,null,null,null,1000,0,1000]);if(i===0)rows.push([null,'Oct 24 - Lunch',100,1,100,8,800,0,800],[null,'Oct 24 - Sangeet',100,1,100,2,200,0,200],[null,'Oct 25 - High Tea',100,1,100,5,500,0,500]);});
  rows.push([null,'Total',null,null,null,null,10000,0,10000]);
  const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
- await page.goto('/'); await page.getByLabel('Paste the brief').fill(brief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click(); await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(brief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
 
 

@@ -10,7 +10,7 @@ test('review a simulated brief reply, correct amber fields and preserve the Exce
     const data = route.request().postDataJSON(); sent.push(data);
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'success', value }) });
   });
-  await page.goto('/');
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
   const briefBox = page.getByLabel('Paste the brief');
   const workbook = page.getByLabel('Excel costing sheet');
   expect(await briefBox.evaluate(element => element.getBoundingClientRect().top)).toBeLessThan(await workbook.evaluate(element => element.getBoundingClientRect().top));
@@ -44,7 +44,7 @@ test('review a simulated brief reply, correct amber fields and preserve the Exce
   await page.screenshot({ path: '/tmp/brief-reader-mobile.png' });
   await page.getByRole('heading', { name: 'Headcounts differ' }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: '/tmp/brief-headcounts-mobile.png' });
-  await page.reload();
+  await page.reload();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
   await expect(page.getByLabel('Paste the brief')).toHaveValue('');
   await expect(page.getByRole('heading', { name: 'Review the requirements' })).toHaveCount(0);
 });
@@ -55,8 +55,8 @@ test('show a quota error without fake requirements and allow a deliberate retry'
     calls++;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'error', errorMessage: message, errorData: message }) });
   });
-  await page.goto('/');
-  await page.getByLabel('Paste the brief').fill(inventedBrief);
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
+  await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(inventedBrief);
   await page.getByRole('button', { name: 'Read the brief', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText(message);
   await expect(page.getByRole('heading', { name: 'Review the requirements' })).toHaveCount(0);

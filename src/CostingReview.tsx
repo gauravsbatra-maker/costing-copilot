@@ -14,7 +14,7 @@ import { proposalChecks } from '../shared/proposalChecks';
 import { useRef, useState, type ReactNode } from 'react';
 import type { Budget } from '../shared/costing';
 import type { Requirements } from '../shared/brief';
-import { chosenHeadcount, applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
+import { chosenHeadcount, applyVariance, parsePastTransferGuests, variancePercentage, buildProposal, formHeadNeeded, mapHead, mappedHeads, matchMeals, mealKind, numberIn, rupees, type Basis, type RangedProposal } from '../shared/proposal';
 export default function CostingReview({ budget, requirements, drivers, setDrivers, onReview, brief, initial }: { initial?: SavedCosting | null; budget: Budget; requirements: Requirements; brief: string; drivers: Record<string,string>; setDrivers: (drivers: Record<string,string>) => void; onReview: (page: ReactNode) => void }) {
   const {saveCosting,isSaving} = useSaveCosting();
   const reviewButton = useRef<HTMLButtonElement>(null);
@@ -61,12 +61,12 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
   const conflict = counts.size > 1 || functions.some(f=>numberIn(f.guests.value)===null);
   const cityRequired = !requirements.fromBriefForm && (!requirements.fields.city.value.trim() || requirements.fields.city.status==='unclear');
   const uncertain = [...Object.entries(requirements.fields).filter(([key])=>key!=='city' && (!requirements.roomNights || (key!=='rooms' && key!=='nights'))).map(([,field])=>field), ...(requirements.roomNights ?? []), ...requirements.functions.flatMap(f=>Object.values(f)), ...requirements.scalingRules.flatMap(r=>Object.values(r))].filter(f=>f.status==='unclear').length;
-  const needed = conflict ? budget.heads.filter(h=>chosenHeadcount(drivers[h.name]??'')===null).length : 0;
+  const needed = conflict ? budget.heads.filter(h=>formHeadNeeded(h,budget,requirements)&&chosenHeadcount(drivers[h.name]??'')===null).length : 0;
   const food = mapHead('Food',budget);
   const transfers = mapHead('Transfers',budget);
   const matches = {...matchMeals(budget,requirements),...overrides};
   const validSheet = budget.heads.length === 10;
-  const benchmarkNeeded = budget.heads.some(h => h.row !== transfers?.row && selectedBases[h.name] === 'headcount') && numberIn(requirements.fields.benchmarkHeadcount.value) === null;
+  const benchmarkNeeded = budget.heads.some(h => formHeadNeeded(h,budget,requirements) && h.row !== transfers?.row && selectedBases[h.name] === 'headcount') && numberIn(requirements.fields.benchmarkHeadcount.value) === null;
   return <section aria-label="Costing review" className="costing-review">
     <h3>Match requirements to sheet rows</h3>{requirements.fromBriefForm && !requirements.fields.city.value.trim() && <p className="amber">City not confirmed</p>}
     <p>Check each meal’s source. Choose “To quote” when the past row isn’t comparable.</p>
@@ -130,6 +130,7 @@ export default function CostingReview({ budget, requirements, drivers, setDriver
       </section>}
       </div><aside className="invoice-summary"><div className="total-with-status"><div className="total-figures"><p className="proposal-total">{contingent ? `Pre-GST total (priced lines only): ${contingencyFigure(contingent.total)}` : 'Enter a valid contingency for every head to show the pre-GST total.'}</p>
       {perGuest&&<p className="per-guest">{perGuest}</p>}</div><PricingStatus proposal={proposal}/></div>
+      {proposal.notInBrief && <section className="not-in-brief" aria-label="Not in this brief (₹0)"><h3>Not in this brief (₹0)</h3><ul>{proposal.notInBrief.filter(name=>proposal.heads.find(head=>head.name===name)?.amount===0).map(name=><li key={name}>{costLabel(name)}</li>)}</ul></section>}
       <CostSummary requirements={requirements} costing={contingent} names={proposal.heads.map(head=>head.name)}/>
       <CostPie costing={contingent} names={proposal.heads.map(head=>head.name)}/>
       <p>{proposal.toQuote.length} To quote lines excluded. This is an incomplete estimate until quoted.</p>

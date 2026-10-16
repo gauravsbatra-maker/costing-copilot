@@ -341,3 +341,6 @@ body:not(:has(.requirements)):not(:has(.proposal-review)) .account-links button 
 .cost-pie li { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 8px; font-size: 16px; overflow-wrap: anywhere; }
 .cost-pie-key { flex: 0 0 12px; height: 12px; margin-top: 7px; border: 1px solid var(--rule); }
 @media (width < 600px) { .cost-pie { grid-template-columns: minmax(0, 1fr); } }
+
+.invoice-summary>.not-in-brief { order: 0; margin: 16px 0; }
+.not-in-brief h3 { font-size: 16px; }

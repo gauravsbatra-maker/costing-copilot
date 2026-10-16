@@ -15,6 +15,7 @@ export function readBriefFormDraft():FormLayoutDraft {
         const after=draft.services.findIndex((row:FormLayoutDraft['services'][number])=>row.name===previous);
         draft.services.splice(after<0?draft.services.length:after+1,0,{name,note:''});
       }
+      if(!draft.miscellaneous || typeof draft.miscellaneous.description!=='string' || typeof draft.miscellaneous.amount!=='string')draft.miscellaneous={description:'',amount:''};
       return draft;
     }
   } catch { /* A blocked browser store or invalid old draft must not stop costing. */ }

@@ -12,7 +12,7 @@ test('upload a workbook and expand pre-GST line items without sending the file',
   ]),'Final costing');
   book.Workbook={Sheets:[{name:'Hidden',Hidden:1},{name:'Final costing',Hidden:0}]};
   let posts=0; page.on('request',r=>{if(r.method()==='POST')posts++;});
-  await page.goto('/');
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
   await page.getByLabel('Excel costing sheet').setInputFiles({name:'test-costing.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
   await expect(page.getByRole('heading',{name:'Final costing'})).toBeVisible();
   await expect(page.getByRole('combobox',{name:'Costing tab'})).toHaveCount(0);
@@ -46,7 +46,7 @@ test('reads two-row headers and no headers, and reports only a missing numeric c
     XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
     await page.getByLabel('Excel costing sheet').setInputFiles({name:'test-costing.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
   };
-  await page.goto('/');
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
   await upload([
     ['Example costing'],
     ['Sr No','Cost head','','','','','Cost'],
@@ -78,7 +78,7 @@ test('choose among visible tabs only and use the chosen tab without reading hidd
   XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([['Private data']]),'Private');
   XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows('Decor',2000)),'Final costing');
   book.Workbook={Sheets:[{name:'Overall WIP',Hidden:1},{name:'Budget draft',Hidden:0},{name:'Private',Hidden:2},{name:'Final costing',Hidden:0}]};
-  await page.goto('/');
+  await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
   await expect(page.getByText("Before uploading: keep only your final costing tab visible and hide all other tabs, for your privacy. Make sure the last column of numbers is your pre-GST total. We read only the visible tab and use its last number column, hidden tabs are never opened.",{exact:true})).toBeVisible();
   await page.getByLabel('Excel costing sheet').setInputFiles({name:'visible-tabs.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
   const picker=page.getByRole('combobox',{name:'Costing tab',exact:true});
@@ -113,7 +113,7 @@ test('header-free column confirmation and picker use the final numeric column an
  ['Subtotal',null,null,null,null,null,600,null,null,750]
  ]),'Final');
  let posts=0;page.on('request',request=>{if(request.method()==='POST')posts++;});
- await page.goto('/');
+ await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
  await expect(page.getByText('Using column J for costs, 3 lines, ₹750 in all',{exact:true})).toBeVisible();
  const picker=page.getByRole('combobox',{name:'Use a different column',exact:true});

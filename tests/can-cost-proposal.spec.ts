@@ -13,7 +13,7 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  heads.forEach((name,i)=>{rows.push([i+1,name,null,null,null,null,1000,0,1000]);if(i===0)rows.push([null,'Oct 24 - Lunch',100,1,100,8,800,0,800],[null,'Oct 24 - Sangeet',100,1,100,2,200,0,200],[null,'Oct 25 - High Tea',100,1,100,5,500,0,500]);});
  rows.push([null,'Total',null,null,null,null,10000,0,10000]);
  const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'Overall WIP');
- await page.goto('/'); await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.goto('/');await page.getByRole('tab',{name:'Paste client brief',exact:true}).click(); await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(detailedBrief); await page.getByRole('button',{name:'Read the brief',exact:true}).click();
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:XLSX.write(book,{type:'buffer',bookType:'xlsx'})});
  await expect(page.getByLabel('Cost head 1',{exact:true})).toHaveValue('Food & beverage');
  await expect(page.getByRole('button',{name:'Enter a rule for Food & beverage',exact:true})).toHaveCount(0);
@@ -108,5 +108,5 @@ test('confirm requirements, choose ten headcounts, price from sheet rows and cle
  await expect(raw).toContainText('Day 1 · High tea · ₹1,250–₹1,250 · midpoint ₹1,250');
  await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Costed first-pass proposal'}).scrollIntoViewIfNeeded();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
- await page.reload();await expect(raw).toHaveCount(0);await expect(page.getByLabel('Paste the brief')).toHaveValue('');
+ await page.reload();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await expect(raw).toHaveCount(0);await expect(page.getByLabel('Paste the brief')).toHaveValue('');
 });

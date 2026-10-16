@@ -10,6 +10,29 @@ const workbook=(technicalHead='Technicals')=>{
 
  return XLSX.write(book,{type:'buffer',bookType:'xlsx'});
 };
+test('form is first by default, omissions are visible at zero and miscellaneous adds exactly 50000',async({page})=>{
+ await page.goto('/');
+ await expect(page.getByRole('tab')).toHaveText(['Fill brief form','Paste client brief']);
+ await expect(page.getByRole('tab',{name:'Fill brief form'})).toHaveAttribute('aria-selected','true');
+ const form=page.getByRole('tabpanel',{name:'Fill brief form'});
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook()});
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();
+ await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
+ await expect(proposal.locator('.proposal-total')).toContainText('midpoint ₹0');
+ await expect(proposal.getByRole('region',{name:'Not in this brief (₹0)'})).toContainText('Decor');
+ const decor=proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Decor ·/})});await expect(decor.locator('h3')).toContainText('midpoint ₹0');
+ await form.getByLabel('Miscellaneous description').fill('Unique installation');await form.getByLabel('Miscellaneous amount').fill('50000');
+ await page.reload();
+ await expect(form.getByLabel('Miscellaneous amount')).toHaveValue('50000');
+ await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook()});
+ await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Seasonal premium',{exact:true}).fill('+10% across all heads');await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ await expect(proposal.locator('.proposal-total')).toContainText('midpoint ₹50,000');
+ const misc=proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Miscellaneous ·/})});await expect(misc).toContainText('Entered by planner');await expect(misc).toContainText('Unique installation');
+ await form.getByLabel('Miscellaneous amount').fill('');await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
+ await expect(proposal.locator('.pricing-status')).toContainText('Miscellaneous');await expect(proposal.locator('.proposal-total')).toContainText('midpoint ₹0');
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
 test('added rows remove only themselves, blank additions submit, and browser drafts restore and clear',async({page})=>{
  await page.goto('/');await page.getByRole('tab',{name:'Fill brief form',exact:true}).click();
  const form=page.getByRole('tabpanel',{name:'Fill brief form',exact:true});
@@ -59,7 +82,7 @@ test('added rows remove only themselves, blank additions submit, and browser dra
  await page.reload();await page.getByRole('tab',{name:'Fill brief form'}).click();
  await expect(form.getByLabel('Event type',{exact:true})).toHaveValue('');
 });
-test('three-column form stays optional, preserves notes without pricing them, and matches equivalent paste',async({page})=>{
+test('form prices only requested heads, preserves service notes and leaves pasted pricing unchanged',async({page})=>{
  const draft=emptyFormLayout();draft.eventType='Wedding';draft.city='Jaipur';draft.dates='2 days';draft.rooms=['30','40'];draft.transfers=['75'];draft.food[0].forEach((f,i)=>f.guests=['250','250','1000','150'][i]);draft.services[0].note='Quoted ₹99: keep the white flowers';
  const expected=requirementsFromForm(draft);let calls=0;
  await page.route('**/api/action',route=>{if(route.request().postDataJSON().path!=='brief:structure')return route.continue();calls++;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({status:'success',value:{...expected,fromBriefForm:undefined,serviceNotes:undefined}})});});
@@ -85,13 +108,13 @@ test('three-column form stays optional, preserves notes without pricing them, an
  await expect(proposal.locator('.service-note')).toHaveText('Décor: '+draft.services[0].note);
  await expect(proposal).toContainText('70 room nights × ₹40,000');await expect(proposal).toContainText('Guest rooms · ₹25,20,000–₹30,80,000 · midpoint ₹28,00,000');
  await proposal.getByRole('button',{name:'Review proposal',exact:true}).click();await expect(page.getByRole('main',{name:'Proposal review'}).locator('.service-note')).toHaveText('Décor: '+draft.services[0].note);await page.getByRole('button',{name:'Back to edit',exact:true}).click();
- await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(layoutBriefText(draft));await page.getByRole('button',{name:'Read the brief',exact:true}).click();await confirm();expect(await proposal.locator('.proposal-total').innerText()).toBe(total);expect(calls).toBe(1);
+ await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByRole('tab',{name:'Paste client brief',exact:true}).click();await page.getByLabel('Paste the brief').fill(layoutBriefText(draft));await page.getByRole('button',{name:'Read the brief',exact:true}).click();await confirm();const midpoint=(text:string)=>Number(text.split('midpoint ₹')[1].replaceAll(',',''));expect(midpoint(await proposal.locator('.proposal-total').innerText())-midpoint(total)).toBe(7000);expect(calls).toBe(1);
 });
 test('mostly blank form costs without inventing rooms, transfer pax or function guests',async({page})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto('/');await page.getByRole('tab',{name:'Fill brief form',exact:true}).click();await page.getByRole('tabpanel',{name:'Fill brief form'}).getByLabel('Event type',{exact:true}).fill('Celebration');
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook()});await page.getByRole('button',{name:'Read the brief',exact:true}).click();await page.getByLabel('Variance',{exact:true}).fill('10%');await page.getByRole('button',{name:'Confirm all',exact:true}).click();
- const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(proposal.locator('.proposal-total')).toContainText('Pre-GST total');await expect(page.getByRole('region',{name:'Costing review',exact:true})).toContainText('City not confirmed');await expect(proposal.locator('.service-note')).toHaveCount(0);await expect(proposal).not.toContainText('room nights ×');await expect(proposal.locator('.pricing-status')).toContainText('To quote: 2 lines not in this total');expect(errors).toEqual([]);
+ const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});await expect(proposal.locator('.proposal-total')).toContainText('Pre-GST total');await expect(page.getByRole('region',{name:'Costing review',exact:true})).toContainText('City not confirmed');await expect(proposal.locator('.service-note')).toHaveCount(0);await expect(proposal).not.toContainText('room nights ×');await expect(proposal.locator('.pricing-status')).toContainText('All lines priced');await expect(proposal.getByRole('region',{name:'Not in this brief (₹0)'})).toContainText('Food & beverage');await expect(proposal.locator('.proposal-total')).toContainText('midpoint ₹0');expect(errors).toEqual([]);
 });
 
 
@@ -136,7 +159,7 @@ test('a full older browser draft keeps all service notes when the new row is add
  await page.evaluate(draft=>localStorage.setItem('costing-brief-form-v1',JSON.stringify(draft)),old);
  await page.reload();await page.getByRole('tab',{name:'Fill brief form'}).click();
  const form=page.getByRole('tabpanel',{name:'Fill brief form'});
- await expect(form.locator('tbody[aria-label="Services Mentioned"] textarea')).toHaveCount(34);
+ await expect(form.locator('tbody[aria-label="Services Mentioned"] textarea')).toHaveCount(35);
  await form.getByLabel('Technicals & Production',{exact:true}).fill('Keep the new note too');
  await page.reload();await page.getByRole('tab',{name:'Fill brief form'}).click();
  await expect(form.getByLabel('Technicals & Production',{exact:true})).toHaveValue('Keep the new note too');
@@ -153,7 +176,7 @@ for(const technicalHead of ['AV','Venue'])test(`technical service row matches ${
  await expect(service).toHaveAttribute('placeholder','Please add quoted rates / special instructions');
  await expect(service.locator('xpath=ancestor::tr')).toContainText('Leave blank if none');
  const names=await form.locator('tbody[aria-label="Services Mentioned"] textarea').evaluateAll(inputs=>inputs.map(input=>input.getAttribute('aria-label')));
- expect(names).toEqual(['Design & Collaterals','Technicals & Production','Crew & Manpower','Venue Rentals','Gifting & Giveaways','Photo & Video']);
+ expect(names).toEqual(['Design & Collaterals','Technicals & Production','Crew & Manpower','Venue Rentals','Gifting & Giveaways','Photo & Video','Miscellaneous description']);
  await expect(form.getByLabel('Design & Collaterals',{exact:true})).toHaveValue('Keep this old draft note');
  await service.fill('Use the house sound desk');
  await page.getByLabel('Excel costing sheet').setInputFiles({name:'invented.xlsx',mimeType:'application/octet-stream',buffer:workbook(technicalHead)});

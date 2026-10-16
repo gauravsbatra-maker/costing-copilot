@@ -7,7 +7,7 @@ import type { Requirements } from './brief.ts';
 export type ProposalRow = CostRow & { quantity?: number; rate?: number };
 export type Basis = 'fixed' | 'headcount';
 export type Line = { label: string; amount: number | null; source: string | null; original?: ProposalRow; headcount: number | null; calculation: string; pricing?: { quantity: number; unitCost: number; multiplier: number } };
-export type Proposal = { heads: { name: string; headcount: number | null; lines: Line[]; amount: number | null }[]; toQuote: Line[]; total: number };
+export type Proposal = { heads: { name: string; headcount: number | null; lines: Line[]; amount: number | null }[]; toQuote: Line[]; total: number;notInBrief?:string[] };
 const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 export function numberIn(s: string): number | null {
   const matches = s.match(/\d[\d,]*(?:\.\d+)?/g);
@@ -63,6 +63,13 @@ export function ruleForHead(head: CostHead, budget: Budget, requirements: Requir
   const explicit = requirements.scalingRules.find(r=>!/^all other heads$/i.test(r.head.value.trim()) && mappedHeads(r.head.value,budget).some(h=>h.row===head.row));
   return explicit?.rule.value ?? requirements.scalingRules.find(r=>/^all other heads$/i.test(r.head.value.trim()))?.rule.value ?? '';
 }
+export function formHeadNeeded(head:CostHead,budget:Budget,r:Requirements):boolean {
+  if(!r.fromBriefForm)return true;
+  if(head.row===mapHead('Food',budget)?.row)return r.functions.some(f=>numberIn(f.guests.value)!==null);
+  if(head.row===mapHead('Transfers',budget)?.row)return numberIn(r.fields.outOfTownGuests.value)!==null;
+  const aliases:Record<string,string>={'Décor':'Decor','Bartenders':'Bar Tenders','Licenses & Permissions':'Licenses','Design & Collaterals':'Graphic Design','Photo & Video':'Photo / Video'};
+  return (r.serviceNotes??[]).some(note=>note.text.trim()&&!/^(?:0(?:\.0+)?|none)$/i.test(note.text.trim()) && (hasServiceAliases(note.name)?serviceHead(note.name,budget):mapHead(aliases[note.name]??note.name,budget))?.name===head.name);
+}
 export function matchMeals(budget: Budget, requirements: Requirements): Record<number, number | null> {
   const food = mapHead('Food', budget); if (!food) return {};
   const days = [...new Set(requirements.functions.map(f => f.day.value))];
@@ -97,7 +104,8 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
   };
   const food = mapHead('Food', budget);
   const transfers = mapHead('Transfers', budget);
-  const heads = budget.heads.map(head => {
+  const heads:Proposal['heads'] = budget.heads.map(head => {
+    if(!formHeadNeeded(head,budget,requirements))return {name:head.name,headcount:null,lines:[{label:head.name,amount:0,source:`${budget.sheet} · ${head.name} · row ${head.row}`,original:head,headcount:null,calculation:'Not in this brief (₹0)',pricing:{quantity:0,unitCost:0,multiplier:1}}],amount:0};
     const isTransfers = head.row === transfers?.row;
     const headcount = isTransfers ? numberIn(requirements.fields.outOfTownGuests.value) : chosenHeadcount(drivers[head.name] ?? '') ?? (new Set(requirements.functions.map(f => numberIn(f.guests.value))).size === 1 ? numberIn(requirements.functions[0]?.guests.value ?? '') : null);
     const rule = ruleForHead(head,budget,requirements);
@@ -150,8 +158,10 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
   }
   if (!food) extras.push(...requirements.functions.map(f => quote(`${f.day.value} · ${f.name.value}`, 'No matching food head in the uploaded sheet.')));
   const roomLines=extras.filter(line=>/accommodation|rooms|hotel stay/i.test(line.label));
+  if(requirements.fromBriefForm && !(requirements.roomNights??[]).some(row=>numberIn(row.value)!==null) && numberIn(requirements.fields.rooms.value)===null){roomLines.length=0;}
+  if(requirements.fromBriefForm && !roomLines.length)roomLines.push({label:'Accommodation · rooms and nights',amount:0,source:null,headcount:null,calculation:'Not in this brief (₹0)',pricing:{quantity:0,unitCost:0,multiplier:1}});
   if(roomLines.length){
-    for(let i=extras.length-1;i>=0;i--)if(roomLines.includes(extras[i]))extras.splice(i,1);
+    for(let i=extras.length-1;i>=0;i--)if(/accommodation|rooms|hotel stay/i.test(extras[i].label))extras.splice(i,1);
     const foodIndex=heads.findIndex(head=>head.name===food?.name);
     heads.splice(foodIndex<0?heads.length:foodIndex+1,0,{name:'Guest Rooms',headcount:null,lines:roomLines,amount:null});
   }
@@ -159,8 +169,15 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     const other = heads.find(h => /other costs/i.test(h.name));
     if (other) other.lines.push(...extras); else heads.push({ name: 'Unmatched requirements', headcount: null, lines: extras, amount: null });
   }
+  if(requirements.fromBriefForm){
+    const misc=requirements.miscellaneous;
+    const line:Line={label:misc?.description||'Miscellaneous',amount:misc?misc.amount:0,source:misc?'Entered by planner':null,headcount:null,calculation:!misc||misc.amount===0?'Not in this brief (₹0)':misc.description||'Entered by planner',...(misc?.amount!==null&&misc?.amount!==undefined?{pricing:{quantity:1,unitCost:misc.amount,multiplier:1}}:{})};
+    const existing=heads.findIndex(head=>head.name==='Miscellaneous');
+    if(existing>=0)heads.splice(existing,1);
+    heads.push({name:'Miscellaneous',headcount:null,lines:[line],amount:line.amount});
+  }
   for (const h of heads) h.amount = h.lines.some(l=>l.amount!==null) ? money(h.lines.reduce((sum,l)=>sum+(l.amount??0),0)) : null;
-  return { heads, toQuote: heads.flatMap(h => h.lines).filter(l => l.amount === null), total: money(heads.flatMap(h => h.lines).reduce((sum, l) => sum + (l.amount ?? 0), 0)) };
+  return { heads, toQuote: heads.flatMap(h => h.lines).filter(l => l.amount === null), total: money(heads.flatMap(h => h.lines).reduce((sum, l) => sum + (l.amount ?? 0), 0)),...(requirements.fromBriefForm?{notInBrief:[...new Set([...budget.heads.filter(head=>!formHeadNeeded(head,budget,requirements)).map(head=>head.name),...heads.filter(head=>head.lines.every(line=>line.amount===0&&line.calculation==='Not in this brief (₹0)')).map(head=>head.name)])]}:{}) };
 }
 export type RangedProposal = Proposal & { variancePercentage: number; varianceSource: string };
 export function variancePercentage(text: string): number | null {

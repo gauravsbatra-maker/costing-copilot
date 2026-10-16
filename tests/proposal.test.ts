@@ -18,6 +18,34 @@ import * as XLSX from 'xlsx';
 const requirements = () => { const r = validateRequirements(detailedExtraction(), detailedBrief); r.fields.city = {value:'Jaipur', status:'corrected', source:'', reason:''}; return r; };
 const head = {row:3,name:'Taj Hotel Expenses',cost:1000,nw:0,w:1000,items:[{row:5,name:'Oct 24 - Welcome Lunch',cost:800,nw:0,w:800,quantity:100,rate:8},{row:6,name:'Oct 24 - Sangeet',cost:200,nw:0,w:200,quantity:100,rate:2},{row:7,name:'Oct 25 - High Tea',cost:500,nw:0,w:500,quantity:100,rate:5}]};
 const budget = {sheet:'Overall WIP',heads:[head],unread:[],total:{row:8,name:'Total',cost:1000,nw:0,w:1000}};
+test('form-only omissions zero sheet costs and miscellaneous adds exactly the planner amount',()=>{
+ const b={...budget,heads:[{...head,name:'Decor',items:[]}]},draft=emptyFormLayout();
+ for(const note of ['', '0', 'none']){
+  draft.services[0].note=note;
+  const omitted=buildProposal(b,requirementsFromForm(draft),{}, {}, {});
+  assert.equal(omitted.heads.find(h=>h.name==='Decor')!.amount,0);
+  assert(omitted.notInBrief?.includes('Decor'));assert.equal(omitted.total,0);
+ }
+ draft.miscellaneous={description:'One-off installation',amount:'50000'};
+ const r=requirementsFromForm(draft);r.fields.seasonalPremium={value:'+10% across all heads',status:'corrected',source:'',reason:''};
+ const p=buildProposal(b,r,{}, {}, {}),misc=p.heads.find(h=>h.name==='Miscellaneous')!;
+ assert.equal(p.total,50000);assert.equal(misc.amount,50000);
+ assert.equal(misc.lines[0].source,'Entered by planner');
+ assert.equal(misc.lines[0].label,'One-off installation');
+ draft.miscellaneous.amount='';
+ const quote=buildProposal(b,requirementsFromForm(draft),{}, {}, {});
+ assert.equal(quote.total,0);assert(quote.toQuote.some(line=>line.label==='One-off installation'));
+ const pasted={...r,fromBriefForm:undefined,miscellaneous:undefined};
+ assert.equal(buildProposal(b,pasted,{}, {Decor:'fixed'},{}).heads[0].amount,1100);
+ assert.equal(buildProposal(b,pasted,{}, {},{}).notInBrief,undefined);
+ draft.miscellaneous={description:'none',amount:''};
+ assert.equal(buildProposal(b,requirementsFromForm(draft),{}, {},{}).heads.find(head=>head.name==='Miscellaneous')!.amount,0);
+ const unmatched=requirementsFromForm(emptyFormLayout());unmatched.serviceNotes=[{name:'Gifting & Giveaways',text:'Welcome hampers'}];
+ const other={...budget,heads:[{...head,name:'Other Costs',items:[]}]};
+ const withQuote=buildProposal(other,unmatched,{}, {},{});
+ assert(withQuote.notInBrief?.includes('Other Costs'));
+ assert(withQuote.toQuote.some(line=>line.label==='Gifting & Giveaways'));
+});
 test('pie uses priced midpoints, keeps the largest six and combines remaining table percentages without changing costs',()=>{
  const amounts=[0.1,3,75,0.6,10,2,4,0.3,5];
  const heads=Object.fromEntries(amounts.map((midpoint,index)=>[`Head ${index}`,{percentage:0,reserve:null,range:{low:midpoint,high:midpoint,midpoint}}]));
@@ -50,7 +78,7 @@ test('crew, venue and gifting service aliases preserve prices and quote only fil
   const p=buildProposal(matched,r,{}, {}, {});
   assert.deepEqual(notesForHead(r,matched,name),[`${service}: ${r.serviceNotes[0].text}`]);
   assert.deepEqual(notesForHead(r,matched,'Other Costs'),[]);
-  assert(!p.toQuote.some(line=>line.label===service));assert.equal(p.total,2000);
+  assert(!p.toQuote.some(line=>line.label===service));assert.equal(p.total,1000);
  }
  r.serviceNotes=groups.map(([name])=>({name,text:'Quote this separately'}));
  const missing=buildProposal(b,r,{}, {}, {});
@@ -73,7 +101,7 @@ test('technical service aliases attach notes without changing prices, and missin
   assert.deepEqual(notesForHead(r,matched,'Other Costs'),[]);
   const p=buildProposal(matched,r,{}, {}, {});
   assert(!p.toQuote.some(line=>line.label==='Technicals & Production'));
-  assert.equal(p.total,2000);
+  assert.equal(p.total,1000);
  }
  const missing=buildProposal(b,r,{}, {}, {});
  assert.equal(missing.total,baseline.total);

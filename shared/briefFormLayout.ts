@@ -5,10 +5,10 @@ export const serviceNames=['Décor','Entertainment','Bartenders','Licenses & Per
 export const functionNames=['Lunch','High Tea','Dinner','After Party'] as const;
 export type FormFunction={name:string;guests:string;custom?:boolean};
 export type FormService={name:string;note:string;custom?:boolean};
-export type FormLayoutDraft={eventType:string;dates:string;city:string;rooms:string[];transfers:string[];food:FormFunction[][];services:FormService[]};
+export type FormLayoutDraft={eventType:string;dates:string;city:string;rooms:string[];transfers:string[];food:FormFunction[][];services:FormService[];miscellaneous?:{description:string;amount:string}};
 export const emptyFoodDay=():FormFunction[]=>functionNames.map(name=>({name,guests:''}));
-export const emptyFormLayout=():FormLayoutDraft=>({eventType:'',dates:'',city:'',rooms:[''],transfers:[''],food:[emptyFoodDay()],services:serviceNames.map(name=>({name,note:''}))});
-const printRows=[['Event type',''],['Event dates',''],['City',''],['Guest Rooms','Day 1'],['Guest Transfers','Day 1'],...functionNames.map(name=>['Food & Beverage',`Day 1 - ${name}`]),...serviceNames.map(name=>['Services Mentioned',name])];
+export const emptyFormLayout=():FormLayoutDraft=>({eventType:'',dates:'',city:'',rooms:[''],transfers:[''],food:[emptyFoodDay()],services:serviceNames.map(name=>({name,note:''})),miscellaneous:{description:'',amount:''}});
+const printRows=[['Event type',''],['Event dates',''],['City',''],['Guest Rooms','Day 1'],['Guest Transfers','Day 1'],...functionNames.map(name=>['Food & Beverage',`Day 1 - ${name}`]),...serviceNames.map(name=>['Services Mentioned',name]),['Services Mentioned','Miscellaneous (unique to this event) — description; optional ₹ amount']];
 // A fixed blank sheet: no client input is included in the download.
 export const printableBlankBrief=`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Blank client brief</title><style>@page{size:A4;margin:15mm}body{font:12px Arial,sans-serif;color:#222}h1{font-size:20px}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #777;padding:9px;text-align:left;vertical-align:top}th:first-child,td:first-child{width:23%}th:nth-child(2),td:nth-child(2){width:29%}td:last-child{height:22px}tr{break-inside:avoid}p{font-size:11px}</style></head><body><h1>Client brief</h1><p>Leave unknown details blank. Add further day, function or service rows as needed.</p><table aria-label="Blank client brief"><thead><tr><th>Section</th><th>Row</th><th>Your details</th></tr></thead><tbody>${printRows.map(([section,row])=>`<tr><th scope="row">${section}</th><td>${row}</td><td></td></tr>`).join('')}</tbody></table></body></html>`;
 
@@ -17,13 +17,17 @@ export function requirementsFromForm(draft:FormLayoutDraft):Requirements {
   const fields=Object.fromEntries(Object.keys(fieldLabels).map(key=>[key,missingField()])) as Record<FieldKey,BriefField>;
   fields.city=provided(draft.city);fields.dates=provided(draft.dates);
   const duration=/\b(\d+)\s*days?\b/i.exec(draft.dates);if(duration)fields.days=provided(duration[1]+' days',draft.dates);
-  const transfers=draft.transfers.map((count,i)=>({count,day:i+1})).filter(row=>row.count.trim());
+  const transfers=draft.transfers.map((count,i)=>({count,day:i+1})).filter(row=>row.count.trim()&&Number(row.count)>0);
+  const misc=draft.miscellaneous;
+  const amount=misc?.amount.trim();
+  const description=misc && !/^(?:0(?:\.0+)?|none)$/i.test(misc.description.trim())?misc.description.trim():'';
+  const miscellaneous=misc && (description||amount)?{description,amount:amount && /^\d+(?:\.\d+)?$/.test(amount) && Number.isSafeInteger(Math.round(Number(amount)*100))?Number(amount):null}:undefined;
   if(transfers.length)fields.outOfTownGuests=provided(String(Math.ceil(transfers.reduce((sum,row)=>sum+Number(row.count),0)/transfers.length)),`${transfers.map(row=>`Day ${row.day}: ${row.count} pax`).join('; ')}; average across ${transfers.length} days`);
-  return {fromBriefForm:true,fields,roomNights:draft.rooms.flatMap((count,i)=>count.trim()?[provided(count,`Day ${i+1}: ${count} rooms`)]:[]),functions:draft.food.flatMap((day,i)=>day.filter(f=>f.guests.trim()).map(f=>({day:provided(`Day ${i+1}`),name:provided(f.name),guests:provided(f.guests)}))),scalingRules:[],serviceNotes:draft.services.filter(s=>s.note.trim()).map(s=>({name:s.name.trim(),text:s.note.trim()}))};
+  return {fromBriefForm:true,...(miscellaneous?{miscellaneous}:{}),fields,roomNights:draft.rooms.flatMap((count,i)=>count.trim()?[provided(count,`Day ${i+1}: ${count} rooms`)]:[]),functions:draft.food.flatMap((day,i)=>day.filter(f=>f.guests.trim()&&!/^(?:0(?:\.0+)?|none)$/i.test(f.guests.trim())).map(f=>({day:provided(`Day ${i+1}`),name:provided(f.name),guests:provided(f.guests)}))),scalingRules:[],serviceNotes:draft.services.filter(s=>s.note.trim()&&!/^(?:0(?:\.0+)?|none)$/i.test(s.note.trim())).map(s=>({name:s.name.trim(),text:s.note.trim()}))};
 }
 export function layoutBriefText(draft:FormLayoutDraft):string {
   const r=requirementsFromForm(draft);
-  return [draft.eventType.trim()&&`Event type: ${draft.eventType.trim()}`,draft.dates.trim()&&`Dates: ${draft.dates.trim()}`,draft.city.trim()&&`City: ${draft.city.trim()}`,...(r.roomNights??[]).map(f=>f.source),r.fields.outOfTownGuests.source,...r.functions.map(f=>`${f.day.value} · ${f.name.value} · ${f.guests.value} guests`),...(r.serviceNotes??[]).map(s=>`${s.name}: ${s.text}`)].filter(Boolean).join('\n');
+  return [draft.eventType.trim()&&`Event type: ${draft.eventType.trim()}`,draft.dates.trim()&&`Dates: ${draft.dates.trim()}`,draft.city.trim()&&`City: ${draft.city.trim()}`,...(r.roomNights??[]).map(f=>f.source),r.fields.outOfTownGuests.source,...r.functions.map(f=>`${f.day.value} · ${f.name.value} · ${f.guests.value} guests`),...(r.serviceNotes??[]).map(s=>`${s.name}: ${s.text}`),r.miscellaneous&&`Miscellaneous: ${r.miscellaneous.description}${r.miscellaneous.amount!==null?` · ₹${r.miscellaneous.amount}`:''}`].filter(Boolean).join('\n');
 }
 export function notesForHead(requirements:Requirements,budget:{heads:{name:string}[]},head:string):string[] {
   const aliases:Record<string,string>={'Décor':'Decor','Bartenders':'Bar Tenders','Licenses & Permissions':'Licenses','Design & Collaterals':'Graphic Design','Photo & Video':'Photo / Video'};
