@@ -31,6 +31,7 @@ export default function ProposalReview({ sourceSheet = 'Overall WIP', brief, req
   const missing = event.type ? checks.missing : ['Event type: Not stated in brief.', ...checks.missing];
   const value = (text: string) => text.trim() || 'Not recorded in confirmed requirements';
   return <main className="proposal-review" aria-label="Proposal review">
+    <img className="brand-logo" src="/logo-dark.png" alt="Costed:CoPilot" width="260" height="163"/>
     <h1 tabIndex={-1}>Review proposal</h1>
     <button className="add-detail" type="button" onClick={onBack}>Back to edit</button>
     <div className="invoice-layout"><div className="invoice-items"><section aria-labelledby="review-scope"><h2 id="review-scope">Scope</h2>
