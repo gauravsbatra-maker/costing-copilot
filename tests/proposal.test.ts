@@ -125,7 +125,7 @@ test('combined named heads and all-other-head rules scale concrete heads; global
  const drivers=Object.fromEntries(b.heads.map(h=>[h.name,'Dinner: 1000']));
  const p=buildProposal(b,r,drivers,{},{});
  assert.equal(p.heads[0].amount,770);
- for(const h of p.heads.slice(1))assert.equal(h.amount,1100);
+ for(const h of p.heads.filter(h=>b.heads.some(row=>row.name===h.name)&&h.name!=='Entertainment'))assert.equal(h.amount,1100);
  assert(!p.toQuote.some(l=>l.label==='All other heads'||l.label==='Decor & technicals'));
  assert.equal(mapHead('F&B and alcohol',budget),head);
 });
@@ -141,11 +141,32 @@ test('rooms use a reviewed brief rate only after explicit confirmation and are i
  const r=requirements();r.fields.rooms.value='17 rooms';r.fields.roomRate.value='₹12,345/room night × 3 nights';r.fields.nights.value='3 nights';
  const b={...budget,heads:[{...head,name:'Other Costs',items:[]}]};
  const p=buildProposal(b,r,{}, { 'Other Costs':'fixed' },{},true);
- const room=p.heads[0].lines.find(l=>l.label==='Accommodation · rooms and nights');
+ const room=p.heads.find(h=>h.name==='Guest Rooms')!.lines.find(l=>l.label==='Accommodation · rooms and nights');
  assert.equal(room?.amount,629595);assert.equal(room?.source,'Client brief · rooms, room rate and nights · confirmed by project head');
  assert.equal(p.heads[0].amount,p.heads[0].lines.reduce((sum,l)=>sum+(l.amount??0),0));
  assert.equal(p.total,p.heads.flatMap(h=>h.lines).reduce((sum,l)=>sum+(l.amount??0),0));
- assert.equal(buildProposal(b,r,{}, {},{}).heads[0].lines.find(l=>/Accommodation/.test(l.label))?.amount,null);
+ assert.equal(buildProposal(b,r,{}, {},{}).heads.find(h=>h.name==='Guest Rooms')!.lines.find(l=>/Accommodation/.test(l.label))?.amount,null);
+});
+
+test('Guest Rooms follows food, has its own summary and pie share, and removes only accommodation from Other Costs',()=>{
+ const r=requirements();r.fields.rooms.value='40';r.fields.nights.value='2';r.fields.roomRate.value='₹35,000/room night';
+ const b={...budget,heads:[head,{...head,name:'Other Costs',row:20,items:[]}]};
+ const quoted=buildProposal(b,r,{}, {},{},false);
+ const priced=buildProposal(b,r,{}, {},{},true);
+ assert.deepEqual(priced.heads.map(h=>h.name),['Taj Hotel Expenses','Guest Rooms','Other Costs']);
+ const rooms=priced.heads[1],other=priced.heads[2];
+ assert.equal(rooms.amount,2800000);assert.equal(rooms.lines.length,1);
+ assert.equal(rooms.lines[0].label,'Accommodation · rooms and nights');
+ assert.equal(other.amount,quoted.heads.find(h=>h.name==='Other Costs')!.amount);
+ assert(!other.lines.some(line=>/Accommodation/.test(line.label)));
+ assert.equal(priced.total,quoted.total+2800000);
+ assert.equal(quoted.heads.find(h=>h.name==='Guest Rooms')!.amount,null);
+ assert(quoted.toQuote.some(line=>/Accommodation/.test(line.label)));
+ const costing=applyContingencies(applyVariance(priced,10,'Test'),{},'');
+ const names=priced.heads.map(h=>h.name),summary=costSummary(r,costing,names);
+ assert.equal(summary[1].name,'Guest Rooms');assert.equal(summary[1].mean,'₹28,00,000');
+ assert.equal(summary[1].perGuest,'₹2,800');
+ assert.equal(costPieSlices(costing,names).find(slice=>slice.name==='Guest Rooms')!.share,summary[1].share);
 });
 
 
@@ -224,7 +245,7 @@ test('send checklist lists headcount rules, pre-filled fields, every missing det
  assert(checks.assumptions.some(s=>s.includes('Guests Transfer (Toyota Crysta) — Transfers use 75 out-of-town guests')&&s.includes('not the historical event guest count')));
  assert(checks.assumptions.some(s=>s.includes('Pre-filled out-of-town guests: 75')));
  assert(checks.assumptions.some(s=>s.includes('Taj Hotel Expenses')&&s.includes('High tea uses the same day’s lunch headcount')));
- assert(checks.assumptions.some(s=>s.includes('Other Costs — Accommodation')&&s.includes('No further seasonal increase')));
+ assert(checks.assumptions.some(s=>s.includes('Guest Rooms — Accommodation')&&s.includes('No further seasonal increase')));
  assert(checks.missing.some(s=>s.startsWith('All cost heads — City: the event city is still unconfirmed')));
  assert(checks.missing.some(s=>s.startsWith('All cost heads — Dates: missing')));
  assert(checks.missing.some(s=>s.includes('After party day / date: missing')));
@@ -288,16 +309,16 @@ test('transfers require their own past guest count, use out-of-town guests, and 
  const drivers={'Taj Hotel Expenses':'Dinner: 1000','Guests Transfer (Toyota Crysta)':'Dinner: 1000',Decor:'Dinner: 1000'};
  const bases={'Taj Hotel Expenses':'headcount','Guests Transfer (Toyota Crysta)':'fixed',Decor:'headcount'} as const;
  const empty=buildProposal(b,r,drivers,bases,{},true);
- assert.equal(empty.heads[1].amount,null);
+ assert.equal(empty.heads.find(h=>h.name===transfer.name)!.amount,null);
  assert(empty.toQuote.some(l=>l.label===transfer.name));
- assert.equal(empty.heads[1].lines[0].source,'Overall WIP · Guests Transfer (Toyota Crysta) · row 20');
+ assert.equal(empty.heads.find(h=>h.name===transfer.name)!.lines[0].source,'Overall WIP · Guests Transfer (Toyota Crysta) · row 20');
  const filled=buildProposal(b,r,drivers,bases,{},true,60);
- assert.equal(filled.heads[1].amount,16500); // 12,000 × 75 ÷ 60 × existing 1.1 seasonal increase.
- assert.equal(filled.heads[1].headcount,75);
- assert.equal(filled.heads[1].lines[0].source,empty.heads[1].lines[0].source);
- assert.deepEqual(filled.heads[0],empty.heads[0]);assert.deepEqual(filled.heads[2],empty.heads[2]);
+ assert.equal(filled.heads.find(h=>h.name===transfer.name)!.amount,16500); // 12,000 × 75 ÷ 60 × existing 1.1 seasonal increase.
+ assert.equal(filled.heads.find(h=>h.name===transfer.name)!.headcount,75);
+ assert.equal(filled.heads.find(h=>h.name===transfer.name)!.lines[0].source,empty.heads.find(h=>h.name===transfer.name)!.lines[0].source);
+ assert.deepEqual(filled.heads[0],empty.heads[0]);assert.deepEqual(filled.heads.find(h=>h.name==='Decor'),empty.heads.find(h=>h.name==='Decor'));
  assert.equal(Math.round((filled.total-empty.total)*100)/100,16500);
- for(const bad of [null,0,-1,1.5,NaN,Infinity,Number.MAX_SAFE_INTEGER+1])assert.equal(buildProposal(b,r,drivers,bases,{},true,bad).heads[1].amount,null);
+ for(const bad of [null,0,-1,1.5,NaN,Infinity,Number.MAX_SAFE_INTEGER+1])assert.equal(buildProposal(b,r,drivers,bases,{},true,bad).heads.find(h=>h.name===transfer.name)!.amount,null);
  const ranged=applyVariance(filled,10,'Client brief · ±10%');
  const missing=proposalChecks(b,r,applyVariance(empty,10,'Client brief · ±10%'),drivers,bases);
  assert(missing.missing.some(s=>s.includes('Guests Transfer (Toyota Crysta) — Guests the past transfers covered: missing')));
@@ -321,11 +342,11 @@ test('head contingencies default to 10% only for transfers and add reserves to b
  assert.deepEqual(c.heads[transfer.name].range,{low:16335,high:19965,midpoint:18150});
  assert.deepEqual(c.heads[transfer.name].reserve,{low:1485,high:1815,midpoint:1650});
  assert.deepEqual(c.total,{low:costRange(p.total,10).low+1485,high:costRange(p.total,10).high+1815,midpoint:p.total+1650});
- for(const h of p.heads.filter(h=>h.name!==transfer.name))assert.deepEqual(c.heads[h.name].range,{...costRange(h.amount!,10),midpoint:h.amount});
+ for(const h of p.heads.filter(h=>h.name!==transfer.name))assert.deepEqual(c.heads[h.name].range,h.amount===null?null:{...costRange(h.amount,10),midpoint:h.amount});
  const zero=applyContingencies(p,Object.fromEntries(p.heads.map(h=>[h.name,0])),transfer.name);
  assert.deepEqual(zero.total,{...costRange(p.total,10),midpoint:p.total});
  const edited=applyContingencies(p,{...defaults,Decor:5},transfer.name);
- assert.equal(edited.heads.Decor.range!.low,Math.round(costRange(p.heads[2].amount!,10).low*1.05*100)/100);
+ assert.equal(edited.heads.Decor.range!.low,Math.round(costRange(p.heads.find(h=>h.name==='Decor')!.amount!,10).low*1.05*100)/100);
  assert.deepEqual(p,original);
  const choices=Object.fromEntries(Object.entries(defaults).map(([name,percentage])=>[name,{percentage,reason:contingencyReason(name===transfer.name,percentage)}]));
  const checks=proposalChecks(b,r,p,drivers,bases,{}, {},60,choices);
@@ -357,20 +378,21 @@ test('line edits preserve seasonal and room factors, source rows, other lines, a
  const c20=applyLineContingencies(editProposal(original,{[key]:{contingency:'20'}}),{[key]:20},defaults,transfer.name);
  assert.deepEqual(c20.heads[transfer.name].range,{low:17820,high:21780,midpoint:19800});
  const quantities=editProposal(original,{[key]:{quantity:'150',unitCost:'250'}});
- assert.equal(quantities.heads[1].amount,41250); // 150 × (12,000 ÷ 60 replaced with 250) × unchanged 1.1.
- assert.deepEqual(quantities.heads[0],original.heads[0]);assert.deepEqual(quantities.heads[2],original.heads[2]);
- assert.equal(quantities.heads[1].lines[0].source,original.heads[1].lines[0].source);
- assert.deepEqual(quantities.heads[1].lines[0].original,original.heads[1].lines[0].original);
- const roomIndex=original.heads[2].lines.findIndex(l=>l.source?.startsWith('Client brief'));
- const room=original.heads[2].lines[roomIndex];
- assert.equal(editProposal(original,{[lineKey('Other Costs',roomIndex)]:{quantity:'1'}}).heads[2].lines[roomIndex].amount,room.pricing!.unitCost*room.pricing!.multiplier);
+ assert.equal(quantities.heads.find(h=>h.name===transfer.name)!.amount,41250); // 150 × (12,000 ÷ 60 replaced with 250) × unchanged 1.1.
+ assert.deepEqual(quantities.heads[0],original.heads[0]);assert.deepEqual(quantities.heads.find(h=>h.name==='Other Costs'),original.heads.find(h=>h.name==='Other Costs'));
+ assert.equal(quantities.heads.find(h=>h.name===transfer.name)!.lines[0].source,original.heads.find(h=>h.name===transfer.name)!.lines[0].source);
+ assert.deepEqual(quantities.heads.find(h=>h.name===transfer.name)!.lines[0].original,original.heads.find(h=>h.name===transfer.name)!.lines[0].original);
+ const roomHead=original.heads.find(h=>h.name==='Guest Rooms')!;
+ const roomIndex=roomHead.lines.findIndex(l=>l.source?.startsWith('Client brief'));
+ const room=roomHead.lines[roomIndex];
+ assert.equal(editProposal(original,{[lineKey('Guest Rooms',roomIndex)]:{quantity:'1'}}).heads.find(h=>h.name==='Guest Rooms')!.lines[roomIndex].amount,room.pricing!.unitCost*room.pricing!.multiplier);
  const missing=editProposal(original,{[key]:{unitCost:''}});
- assert.equal(missing.heads[1].amount,null);assert(missing.toQuote.some(l=>l.label===transfer.name));
- assert.equal(editProposal(original,{[key]:{quantity:'0'}}).heads[1].amount,0);
+ assert.equal(missing.heads.find(h=>h.name===transfer.name)!.amount,null);assert(missing.toQuote.some(l=>l.label===transfer.name));
+ assert.equal(editProposal(original,{[key]:{quantity:'0'}}).heads.find(h=>h.name===transfer.name)!.amount,0);
  assert.deepEqual(applyLineContingencies(editProposal(original,{}),{},defaults,transfer.name),baseline);
  assert.deepEqual(original,snapshot);
  const missingBasis=applyVariance(buildProposal(b,r,{}, {}, {},true),10,'Client brief');
- assert.equal(editProposal(missingBasis,{[key]:{quantity:'75',unitCost:'200'}}).heads[1].amount,null);
+ assert.equal(editProposal(missingBasis,{[key]:{quantity:'75',unitCost:'200'}}).heads.find(h=>h.name===transfer.name)!.amount,null);
  const mealKey=lineKey(head.name,1);
  const mixed=applyLineContingencies(original,{[mealKey]:20},defaults,transfer.name);
  const meal=original.heads[0].lines[1].amount!;

@@ -29,12 +29,12 @@ for(const withDinner of [true,false])test(`headcount chooser defaults to ${withD
  await page.getByRole('button',{name:'Confirm all',exact:true}).click();
  const proposal=page.getByRole('region',{name:'Costed proposal',exact:true});
  const original=await proposal.locator('.proposal-total').innerText();
- const otherHeads=await proposal.locator('.proposal-head').evaluateAll(heads=>heads.filter(h=>!h.querySelector('h3')!.textContent!.startsWith('Technicals ·')).map(h=>h.textContent));
+ const otherHeads=await proposal.locator('.proposal-head').evaluateAll(heads=>heads.filter(h=>!h.querySelector('h3')!.textContent!.startsWith('Technicals ·')).map(h=>{const copy=h.cloneNode(true) as HTMLElement;copy.querySelector('.head-share')?.remove();return copy.textContent;}));
  await chooser.selectOption(`Total for the day (all functions) · Day 1: ${total}`);
  await expect(proposal).toHaveCount(0);
  await page.getByRole('button',{name:'Cost it',exact:true}).click();
  await expect(proposal.locator('.proposal-head').filter({has:page.getByRole('heading',{name:/^Technicals ·/})})).toContainText(`Headcount: ${total}`);
- expect(await proposal.locator('.proposal-head').evaluateAll(heads=>heads.filter(h=>!h.querySelector('h3')!.textContent!.startsWith('Technicals ·')).map(h=>h.textContent))).toEqual(otherHeads);
+ expect(await proposal.locator('.proposal-head').evaluateAll(heads=>heads.filter(h=>!h.querySelector('h3')!.textContent!.startsWith('Technicals ·')).map(h=>{const copy=h.cloneNode(true) as HTMLElement;copy.querySelector('.head-share')?.remove();return copy.textContent;}))).toEqual(otherHeads);
  await chooser.selectOption(preferred);
  await page.getByRole('button',{name:'Cost it',exact:true}).click();
  await expect(proposal.locator('.proposal-total')).toHaveText(original);

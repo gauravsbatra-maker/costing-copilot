@@ -149,6 +149,12 @@ export function buildProposal(budget: Budget, requirements: Requirements, driver
     } else if (!extras.some(l=>/accommodation|rooms|hotel stay/i.test(l.label))) extras.push(quote(label, 'No accommodation row in the uploaded sheet.'));
   }
   if (!food) extras.push(...requirements.functions.map(f => quote(`${f.day.value} · ${f.name.value}`, 'No matching food head in the uploaded sheet.')));
+  const roomLines=extras.filter(line=>/accommodation|rooms|hotel stay/i.test(line.label));
+  if(roomLines.length){
+    for(let i=extras.length-1;i>=0;i--)if(roomLines.includes(extras[i]))extras.splice(i,1);
+    const foodIndex=heads.findIndex(head=>head.name===food?.name);
+    heads.splice(foodIndex<0?heads.length:foodIndex+1,0,{name:'Guest Rooms',headcount:null,lines:roomLines,amount:null});
+  }
   if (extras.length) {
     const other = heads.find(h => /other costs/i.test(h.name));
     if (other) other.lines.push(...extras); else heads.push({ name: 'Unmatched requirements', headcount: null, lines: extras, amount: null });

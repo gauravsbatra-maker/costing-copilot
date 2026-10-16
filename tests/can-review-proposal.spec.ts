@@ -46,12 +46,12 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  await expect(proposal.locator('.proposal-total + .per-guest')).toHaveText(expectedPerGuest);
  await expect(proposal.locator('.per-guest')).toHaveCSS('color','rgb(163, 50, 42)');
  const shares=await proposal.locator('.head-share').allTextContents();
- expect(shares).toHaveLength(10);
+ expect(shares).toHaveLength(11);
  expect(shares.reduce((sum,text)=>sum+Math.round(parseFloat(text)*10),0)).toBe(1000);
  const headPrices=await proposal.locator('.proposal-head > h3').allTextContents();
  const summary=proposal.getByRole('table',{name:'Cost summary',exact:true});
  await expect(summary.getByRole('columnheader')).toHaveText(['Expense head','Mean (midpoint, ₹)','Per guest (₹)','% of total']);
- await expect(summary.locator('tbody tr')).toHaveCount(10);
+ await expect(summary.locator('tbody tr')).toHaveCount(11);
  const money=(n:number)=>'₹'+Math.round(n).toLocaleString('en-IN');
  for(const [i,price] of headPrices.entries()){
   const midpoint=Number(price.split(' · midpoint ')[1].slice(1).replaceAll(',',''));
@@ -88,10 +88,10 @@ for (const eventStated of [true,false]) test(`review ${eventStated?'a stated eve
  await expect(assumptions.getByText('Event type: Not stated in brief.',{exact:true})).toHaveCount(eventStated?0:1);
  await expect(assumptions.locator('details')).not.toHaveAttribute('open','');
  const table=review.getByRole('table',{name:'Reviewed costs',exact:true});
- await expect(table.getByRole('row')).toHaveCount(11);
- for(const [i,originalHead] of heads.entries()){
+ await expect(table.getByRole('row')).toHaveCount(12);
+ for(const [i,originalHead] of [heads[0],'Guest Rooms',...heads.slice(1)].entries()){
   const head=originalHead==='Taj Hotel Expenses'?'Food & beverage':originalHead;
-  const row=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:head,exact:i!==2})});
+  const row=table.getByRole('row').filter({has:page.getByRole('rowheader',{name:head,exact:!head.startsWith('Guests Transfer')})});
   await expect(row).toHaveCount(1);
   const figure=headPrices[i].slice(head.length+3).split(' · midpoint ');
   await expect(row).toContainText(figure[0]);await expect(row).toContainText(figure[1]);
