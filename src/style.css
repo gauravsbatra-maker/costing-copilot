@@ -329,3 +329,6 @@ body:not(:has(.requirements)):not(:has(.proposal-review)) .account-links button 
  main:not(.proposal-review):not(:has(.requirements)) header { max-width: none; container-type: inline-size; }
  main:not(.proposal-review):not(:has(.requirements)) h1 { font-size: min(56px, 4.6cqw); white-space: nowrap; text-wrap: nowrap; }
 }
+@media (width < 1024px) {
+ body:not(:has(.requirements)):not(:has(.proposal-review)) .first-page-logo { width: 265px; max-width: calc(100% - 88px); }
+}
